@@ -150,7 +150,8 @@ async function request(url,options={},timeout=60000,retries=0){
 }
 async function cf(path,opts={},config={}){
  const isGet=!opts.method||opts.method.toUpperCase()==="GET";
- const res=await request(apiUrl(path),{...opts,headers:{Authorization:"Bearer "+activeToken,...(opts.headers||{})}},config.timeout||60000,isGet?2:0);
+ const retries=Number.isInteger(config.retries)?Math.max(0,Math.min(config.retries,4)):(isGet?2:0);
+ const res=await request(apiUrl(path),{...opts,headers:{Authorization:"Bearer "+activeToken,...(opts.headers||{})}},config.timeout||60000,retries);
  let raw="";try{raw=await res.text()}catch(e){throw new Error("Cloudflare response body read failed | HTTP "+res.status+" | "+e.name+": "+e.message)}
  let j;try{j=JSON.parse(raw)}catch(e){throw new Error("Cloudflare returned non-JSON | HTTP "+res.status+" | content-type="+(res.headers.get("content-type")||"unknown")+" | body="+raw.slice(0,1600))}
  if(!res.ok||!j.success)throw new Error("Cloudflare API rejected request | HTTP "+res.status+" | "+JSON.stringify({errors:j.errors||[],messages:j.messages||[],result:j.result||null}).slice(0,4000));
@@ -263,8 +264,8 @@ function buildAssetMultipart(bucket,assetMap){
 }
 async function applyD1Migrations(accountId,dbId,migrations){
  const endpoint="/accounts/"+accountId+"/d1/database/"+dbId+"/query";
- await cf(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sql:"CREATE TABLE IF NOT EXISTS __zerynx_installer_migrations (name TEXT PRIMARY KEY, checksum TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"})},{timeout:90000});
- const response=await cf(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sql:"SELECT name, checksum FROM __zerynx_installer_migrations"})},{timeout:90000});
+ await cf(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sql:"CREATE TABLE IF NOT EXISTS __zerynx_installer_migrations (name TEXT PRIMARY KEY, checksum TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"})},{timeout:90000,retries:3});
+ const response=await cf(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sql:"SELECT name, checksum FROM __zerynx_installer_migrations"})},{timeout:90000,retries:3});
  const first=Array.isArray(response)?response[0]:response;
  const done=new Map(((first&&first.results)||[]).map(x=>[x.name,x.checksum]));
  for(const migration of migrations){
