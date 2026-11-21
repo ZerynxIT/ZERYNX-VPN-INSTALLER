@@ -206,8 +206,7 @@ export default {
 
     try {
       // Buffer only the asset multipart request. Other request bodies remain streamed.
-      const isAssetUpload = path === "/accounts/" +
-        path.split("/")[2] + "/workers/assets/upload";
+      const isAssetUpload = /^\/accounts\/[a-f0-9]{32}\/workers\/assets\/upload$/i.test(path);
 
       let body;
       if (method !== "GET" && method !== "HEAD") {
