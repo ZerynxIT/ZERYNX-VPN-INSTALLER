@@ -243,17 +243,23 @@ function assetMime(path){
  const e=path.split(".").pop().toLowerCase();
  return ({html:"text/html; charset=utf-8",css:"text/css; charset=utf-8",js:"application/javascript",mjs:"application/javascript",json:"application/json",svg:"image/svg+xml",png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",webp:"image/webp",gif:"image/gif",ico:"image/x-icon",txt:"text/plain; charset=utf-8",woff:"font/woff",woff2:"font/woff2"})[e]||"application/octet-stream";
 }
-function buildAssetFormData(bucket,assetMap){
- const form=new FormData();
+function buildAssetMultipart(bucket,assetMap){
+ const boundary="----ZERYNXInstaller"+crypto.randomUUID().replace(/-/g,"");
+ const parts=[];
  for(const hash of bucket){
   const asset=assetMap[hash];
   if(!asset)throw new Error("Unknown asset hash: "+hash);
-  // Cloudflare expects each multipart field value to be the base64 string.
-  // Do not append a Blob/File: that adds a filename and changes the part
-  // from a plain string field into a file upload.
-  form.append(hash,asset.encoded);
+  // Cloudflare expects a normal multipart field (no filename), containing
+  // base64 text, with the original asset MIME type on that part.
+  parts.push("--"+boundary+"\\r\\n");
+  parts.push('Content-Disposition: form-data; name="'+hash+'"\\r\\n');
+  parts.push("Content-Type: "+assetMime(asset.path)+"\\r\\n\\r\\n");
+  parts.push(asset.encoded);
+  parts.push("\\r\\n");
  }
- return form;
+ parts.push("--"+boundary+"--\\r\\n");
+ const body=new Blob(parts,{type:"multipart/form-data; boundary="+boundary});
+ return body;
 }
 async function applyD1Migrations(accountId,dbId,migrations){
  const endpoint="/accounts/"+accountId+"/d1/database/"+dbId+"/query";
@@ -356,11 +362,11 @@ async function deploy(token,updating){
   // Use native FormData with plain string fields: field name = content hash,
   // field value = base64-encoded asset content.
   for(const bucket of buckets){
-   const form=buildAssetFormData(bucket,assetMap);
+   const body=buildAssetMultipart(bucket,assetMap);
    const totalBytes=bucket.reduce((sum,hash)=>sum+(assetMap[hash]?.bytes?.byteLength||0),0);
    currentStage="آپلود Assets به Cloudflare | batch "+(buckets.indexOf(bucket)+1)+"/"+buckets.length+" | files="+bucket.length+" | bytes="+totalBytes;
    log("Uploading asset batch: "+bucket.length+" file(s), "+totalBytes+" source bytes...");
-   const upload=await request(apiUrl("/accounts/"+account.id+"/workers/assets/upload?base64=true"),{method:"POST",headers:{Authorization:"Bearer "+session.jwt},body:form},180000,0);
+   const upload=await request(apiUrl("/accounts/"+account.id+"/workers/assets/upload?base64=true"),{method:"POST",headers:{Authorization:"Bearer "+session.jwt,"Content-Type":body.type},body},180000,0);
    let uploadJson;try{uploadJson=await upload.json()}catch(e){throw new Error("Assets upload returned a non-JSON response (HTTP "+upload.status+").")}
    if(!upload.ok||!uploadJson.success)throw new Error("Assets upload failed (HTTP "+upload.status+"): "+JSON.stringify(uploadJson.errors||uploadJson));
    if(uploadJson.result&&uploadJson.result.jwt)completion=uploadJson.result.jwt;
