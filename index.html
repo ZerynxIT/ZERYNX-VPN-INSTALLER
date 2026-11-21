@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07111f">
+<title>ZERYNX VPN INSTALLER</title>
+<style>
+:root{color-scheme:dark;--bg:#050b15;--panel:#0b1728;--line:#1b3552;--text:#e8f3ff;--muted:#8ba4bf;--cyan:#25c9ff;--blue:#2878ff;--ok:#35d49a;--bad:#ff6d83}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0%,#102d4a 0,transparent 42%),var(--bg);color:var(--text);font:15px/1.8 Tahoma,Arial,sans-serif;min-height:100vh}
+.wrap{max-width:980px;margin:auto;padding:26px 16px 60px}.top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px}
+.brand{display:flex;align-items:center;gap:12px}.mark{width:46px;height:46px;border:1px solid #27618c;border-radius:13px;display:grid;place-items:center;color:var(--cyan);font-weight:900;font-size:25px;box-shadow:0 0 24px #168dce33}
+h1{font-size:19px;letter-spacing:2px;margin:0}.sub{color:var(--muted);font-size:11px;letter-spacing:2px}
+.pill{border:1px solid var(--line);padding:5px 10px;border-radius:30px;color:var(--muted);font-size:12px}
+.hero,.panel{background:linear-gradient(145deg,#0c1b2d,#091321);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:0 20px 60px #0003}
+.hero{margin-bottom:16px}.hero h2{font-size:25px;margin:0 0 5px}.hero p{color:var(--muted);margin:0}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.panel h3{margin:0 0 15px;font-size:17px}
+label{display:block;color:#b7cce0;font-size:13px;margin:13px 0 6px}input{width:100%;background:#050d18;border:1px solid #24415f;border-radius:11px;padding:13px;color:white;font:inherit;outline:none}input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #25c9ff1c}
+button,.linkbtn{border:0;border-radius:11px;padding:12px 17px;background:linear-gradient(100deg,#137acb,#20b9e8);color:white;font:inherit;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block}
+button:disabled{opacity:.5;cursor:not-allowed}.secondary{background:#13263b;border:1px solid #294763;color:#d7eaff}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}.hint{font-size:12px;color:var(--muted);margin-top:8px}.danger{color:#ffb1bd}.good{color:var(--ok)}
+.steps{display:grid;gap:10px}.step{display:flex;gap:11px;align-items:flex-start;padding:11px;border:1px solid #19344f;border-radius:12px;background:#071321}.num{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#103c5a;color:var(--cyan);font-size:12px;font-weight:bold}.step b{display:block;font-size:13px}.step small{color:var(--muted)}
+.log{margin-top:16px;background:#030912;border:1px solid #1a3047;border-radius:13px;padding:13px;min-height:105px;max-height:240px;overflow:auto;direction:rtl;font:12px/2.1 ui-monospace,monospace;color:#b8d4ed;white-space:pre-wrap}
+.result{display:none;margin-top:16px;border:1px solid #1c7059;background:#09251f;border-radius:14px;padding:16px}.result a{color:#62dbff;direction:ltr;display:block;word-break:break-all}
+.foot{color:#6f88a2;font-size:11px;text-align:center;margin-top:20px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.hero h2{font-size:21px}.top{align-items:flex-start}.pill{font-size:10px}}
+</style></head>
+<body><main class="wrap">
+<header class="top"><div class="brand"><div class="mark">Z</div><div><h1>ZERYNX</h1><div class="sub">VPN INSTALLER · CLOUDFLARE DEPLOYMENT</div></div></div><span class="pill">Installer v1.0.0</span></header>
+<section class="hero"><h2>راه‌اندازی خودکار ZERYNX VPN</h2><p>ساخت دیتابیس، اتصال D1، انتشار Worker و بررسی سلامت؛ بدون تغییر در ریپوی اصلی شما.</p></section>
+<div class="grid">
+<section class="panel">
+<h3>شروع نصب یا به‌روزرسانی</h3>
+<label for="token">Cloudflare API Token</label><input id="token" type="password" autocomplete="off" placeholder="توکن را اینجا وارد کنید">
+<div class="hint">توکن فقط در حافظه همین صفحه استفاده می‌شود؛ در LocalStorage یا ریپوی شما ذخیره نمی‌شود.</div>
+<label for="worker">نام Worker</label><input id="worker" value="zerynx-vpn" maxlength="63" autocomplete="off">
+<div class="hint">فقط حروف انگلیسی کوچک، عدد و خط تیره؛ ابتدا و انتهای نام نباید خط تیره باشد.</div>
+<div class="actions"><button id="install">شروع نصب خودکار</button><button class="secondary" id="update">به‌روزرسانی پنل</button></div>
+<div class="hint">برای به‌روزرسانی، از همان مرورگر و دستگاهی استفاده کنید که نصب اولیه را انجام داده است.</div>
+<div class="actions"><a class="linkbtn secondary" href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">ساخت API Token</a><a class="linkbtn secondary" href="https://developers.cloudflare.com/fundamentals/api/reference/permissions/" target="_blank" rel="noopener">راهنمای دسترسی‌ها</a></div>
+<div id="result" class="result"><b class="good">عملیات با موفقیت انجام شد.</b><p>آدرس پنل:</p><a id="url" target="_blank" rel="noopener"></a><div class="actions"><button class="secondary" id="copy">کپی آدرس</button></div></div>
+</section>
+<aside class="panel">
+<h3>مراحل عملیات</h3><div class="steps">
+<div class="step"><span class="num">01</span><div><b>اعتبارسنجی توکن</b><small>بررسی دسترسی‌ها و حساب Cloudflare</small></div></div>
+<div class="step"><span class="num">02</span><div><b>ساخت یا بازیابی D1</b><small>شناسه دیتابیس مختص حساب شما</small></div></div>
+<div class="step"><span class="num">03</span><div><b>دریافت سورس رسمی</b><small>دریافت فایل‌های آخرین نسخه از ریپوی ZERYNX</small></div></div>
+<div class="step"><span class="num">04</span><div><b>انتشار Worker و Assets</b><small>اتصال DB و ASSETS بدون نوشتن اطلاعات در GitHub</small></div></div>
+<div class="step"><span class="num">05</span><div><b>Health Check</b><small>بررسی واقعی پاسخ API و اتصال D1</small></div></div>
+</div></aside>
+</div>
+<div class="log" id="log" aria-live="polite">آماده. توکن را فقط در همین صفحه وارد کنید.</div>
+<div class="foot">ZERYNX-VPN-INSTALLER · Source: github.com/ZerynxIT/ZERYNX-VPN · Copyright © ZERYNX</div>
+</main>
+<script>
+(() => {
+'use strict';
+const $=id=>document.getElementById(id);
+const API='https://api.cloudflare.com/client/v4';
+const RAW='https://raw.githubusercontent.com/ZerynxIT/ZERYNX-VPN/main/';
+const META_KEY='zerynx_installer_deployment_v1';
+let activeToken='';
+function log(s,kind=''){const el=$('log');const line=document.createElement('div');line.textContent=(kind==='ok'?'✓ ':kind==='bad'?'✕ ':'› ')+s;line.style.color=kind==='ok'?'#55dda9':kind==='bad'?'#ff8295':'#b8d4ed';el.appendChild(line);el.scrollTop=el.scrollHeight}
+function setBusy(v){$('install').disabled=v;$('update').disabled=v}
+function safeName(s){return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(s)}
+async function cf(path,opts={}) {
+ const res=await fetch(API+path,{...opts,headers:{Authorization:'Bearer '+activeToken,...(opts.headers||{})}});
+ let j;try{j=await res.json()}catch{throw new Error('پاسخ Cloudflare قابل خواندن نبود؛ احتمالاً محدودیت CORS یا خطای شبکه است.')}
+ if(!res.ok||!j.success)throw new Error((j.errors||[]).map(x=>x.message).join(' | ')||`Cloudflare API ${res.status}`);
+ return j.result;
+}
+async function getJson(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('دریافت سورس ناموفق بود: '+url);return r}
+function b64(buf){let s='';const a=new Uint8Array(buf);for(let i=0;i<a.length;i+=0x8000)s+=String.fromCharCode(...a.subarray(i,i+0x8000));return btoa(s)}
+async function digest(file){const ext=file.path.split('.').pop().toLowerCase();const encoded=b64(file.bytes);const input=new TextEncoder().encode(encoded+ext);const hash=await crypto.subtle.digest('SHA-256',input);return {hash:[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,32),encoded}}
+async function loadSource(){
+ log('دریافت Worker و فایل‌های پنل از مخزن رسمی...');
+ const paths=['worker/src/index.js','worker/public/index.html','worker/public/assets/logo.svg','worker/public/assets/banner.jpg'];
+ const files=[];
+ for(const path of paths){const r=await getJson(RAW+path);files.push({path,bytes:await r.arrayBuffer(),type:r.headers.get('content-type')||mime(path)});log('دریافت شد: '+path,'ok')}
+ return files;
+}
+function mime(p){return p.endsWith('.html')?'text/html':p.endsWith('.svg')?'image/svg+xml':p.endsWith('.jpg')?'image/jpeg':'application/javascript+module'}
+async function deploy(token,updating){
+ activeToken=token;
+ const name=$('worker').value.trim().toLowerCase();
+ if(!safeName(name))throw new Error('نام Worker معتبر نیست.');
+ log('اعتبارسنجی API Token...');
+ const verify=await cf('/user/tokens/verify');if(verify.status!=='active')throw new Error('توکن فعال نیست.');
+ const accounts=await cf('/accounts?per_page=50');
+ if(!accounts.length)throw new Error('این توکن به هیچ حساب Cloudflare دسترسی ندارد.');
+ let saved=null;try{saved=JSON.parse(localStorage.getItem(META_KEY)||'null')}catch{}
+ let account;
+ if(updating){
+   if(!saved||saved.workerName!==name)throw new Error('اطلاعات نصب قبلی در این مرورگر پیدا نشد یا نام Worker متفاوت است. نصب اولیه را با همین مرورگر انجام دهید.');
+   account=accounts.find(a=>a.id===saved.accountId);if(!account)throw new Error('حساب نصب قبلی با این توکن در دسترس نیست.');
+ }else{
+   account=accounts.length===1?accounts[0]:accounts[0];
+   if(accounts.length>1){const choice=prompt('چند حساب پیدا شد. Account ID حساب مقصد را وارد کنید:\n'+accounts.map(a=>a.name+' — '+a.id).join('\n'));if(!choice)throw new Error('انتخاب حساب لغو شد.');account=accounts.find(a=>a.id===choice.trim());if(!account)throw new Error('Account ID انتخاب‌شده معتبر نیست.')}
+ }
+ log('حساب انتخاب شد: '+account.name,'ok');
+ let dbId,dbName;
+ if(updating){dbId=saved.databaseId;dbName=saved.databaseName;log('استفاده مجدد از دیتابیس قبلی؛ هیچ دیتایی حذف نمی‌شود.')}
+ else{
+   dbName=('zerynx-'+name).slice(0,48);
+   log('ساخت دیتابیس D1: '+dbName);
+   const d=await cf(`/accounts/${account.id}/d1/database`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:dbName})});
+   dbId=d.uuid; if(!dbId)throw new Error('Cloudflare شناسه دیتابیس را برنگرداند.');
+   localStorage.setItem(META_KEY,JSON.stringify({accountId:account.id,workerName:name,databaseId:dbId,databaseName:dbName}));
+   log('دیتابیس ساخته شد: '+dbId,'ok');
+ }
+ const files=await loadSource();
+ const manifest={},byHash={};
+ for(const f of files){const d=await digest(f);f.hash=d.hash;f.encoded=d.encoded;manifest['/'+f.path.replace(/^worker\/public\//,'')]= {hash:d.hash,size:f.bytes.byteLength};byHash[d.hash]=f}
+ log('ثبت فهرست فایل‌های Static Assets...');
+ const session=await cf(`/accounts/${account.id}/workers/scripts/${name}/assets-upload-session`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({manifest:Object.fromEntries(files.filter(f=>f.path.startsWith('worker/public/')).map(f=>{const p='/'+f.path.replace(/^worker\/public\//,'');return [p,manifest[p]]}))})});
+ let completion=session.jwt;
+ for(const bucket of (session.buckets||[])){
+   const form=new FormData();
+   for(const hash of bucket){const f=byHash[hash];if(!f)throw new Error('Asset hash ناشناخته: '+hash);form.append(hash,f.encoded)}
+   const rr=await fetch(API+`/accounts/${account.id}/workers/assets/upload?base64=true`,{method:'POST',headers:{Authorization:'Bearer '+session.jwt},body:form});
+   const jj=await rr.json();if(!rr.ok||!jj.success)throw new Error('آپلود Assets ناموفق بود: '+JSON.stringify(jj.errors||jj));
+   if(jj.result?.jwt)completion=jj.result.jwt;
+   log('بسته فایل‌های پنل آپلود شد.','ok');
+ }
+ const workerFile=files.find(f=>f.path==='worker/src/index.js');
+ const metadata={main_module:'worker.js',compatibility_date:'2025-11-01',bindings:[
+   {type:'d1',name:'DB',database_id:dbId},
+   {type:'assets',name:'ASSETS'}
+ ],assets:{jwt:completion,config:{html_handling:'auto-trailing-slash'}}};
+ const form=new FormData();
+ form.append('metadata',new Blob([JSON.stringify(metadata)],{type:'application/json'}));
+ form.append('worker.js',new Blob([workerFile.bytes],{type:'application/javascript+module'}),'worker.js');
+ log('انتشار Worker و اتصال Bindingهای DB و ASSETS...');
+ const put=await fetch(API+`/accounts/${account.id}/workers/scripts/${name}`,{method:'PUT',headers:{Authorization:'Bearer '+activeToken},body:form});
+ const pj=await put.json();if(!put.ok||!pj.success)throw new Error('Deploy ناموفق بود: '+JSON.stringify(pj.errors||pj));
+ log('Worker منتشر شد.','ok');
+ try{await cf(`/accounts/${account.id}/workers/scripts/${name}/subdomain`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:true})})}catch(e){log('فعال‌سازی workers.dev خودکار انجام نشد: '+e.message,'bad')}
+ let sub;
+ try{sub=(await cf(`/accounts/${account.id}/workers/subdomain`)).subdomain}catch(e){
+   const proposed='zerynx-'+Math.random().toString(36).slice(2,8);
+   const v=prompt('برای ساخت آدرس workers.dev، یک subdomain حساب لازم است. نام پیشنهادی را تأیید یا ویرایش کنید:',proposed);
+   if(!v)throw new Error('ساخت subdomain لغو شد. از داشبورد Cloudflare آن را فعال کنید و دوباره به‌روزرسانی را بزنید.');
+   sub=(await cf(`/accounts/${account.id}/workers/subdomain`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({subdomain:v.toLowerCase()})})).subdomain;
+ }
+ const url=`https://${name}.${sub}.workers.dev`;
+ log('بررسی سلامت Worker و D1...');
+ let health=null,lastErr=null;
+ for(let i=0;i<12;i++){try{const r=await fetch(url+'/api/health',{cache:'no-store'});health=await r.json();if(health.ok&&health.database==='connected')break;lastErr=new Error(JSON.stringify(health))}catch(e){lastErr=e}await new Promise(r=>setTimeout(r,2500))}
+ if(!health?.ok||health.database!=='connected')throw new Error('Worker منتشر شد اما Health Check موفق نبود. آخرین خطا: '+(lastErr?.message||JSON.stringify(health)));
+ log('اتصال واقعی D1 تأیید شد. نسخه '+health.version,'ok');
+ $('url').href=url;$('url').textContent=url;$('result').style.display='block';
+ localStorage.setItem(META_KEY,JSON.stringify({accountId:account.id,workerName:name,databaseId:dbId,databaseName:dbName,subdomain:sub}));
+ log(updating?'به‌روزرسانی پنل کامل شد. دیتابیس قبلی حفظ شد.':'نصب ZERYNX VPN کامل شد.','ok');
+}
+$('install').addEventListener('click',async()=>{const t=$('token').value.trim();if(!t)return alert('API Token را وارد کنید.');$('log').textContent='';$('result').style.display='none';setBusy(true);try{await deploy(t,false)}catch(e){log(e.message,'bad');alert(e.message)}finally{activeToken='';$('token').value='';setBusy(false)}});
+$('update').addEventListener('click',async()=>{const t=$('token').value.trim();if(!t)return alert('برای به‌روزرسانی API Token را وارد کنید.');$('log').textContent='';$('result').style.display='none';setBusy(true);try{await deploy(t,true)}catch(e){log(e.message,'bad');alert(e.message)}finally{activeToken='';$('token').value='';setBusy(false)}});
+$('copy').onclick=()=>navigator.clipboard.writeText($('url').href);
+})();
+</script></body></html>
