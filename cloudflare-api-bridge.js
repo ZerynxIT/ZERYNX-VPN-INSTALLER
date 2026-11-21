@@ -53,21 +53,9 @@ export default {
 
     try {
       const target = new URL(incoming.pathname + incoming.search, UPSTREAM_ORIGIN);
-      const upstreamHeaders = new Headers(request.headers);
-      upstreamHeaders.delete("Origin");
-      upstreamHeaders.delete("Host");
-      upstreamHeaders.delete("Referer");
-
-      const init = {
-        method: request.method,
-        headers: upstreamHeaders,
-        redirect: "follow"
-      };
-      if (request.method !== "GET" && request.method !== "HEAD") {
-        init.body = request.body;
-      }
-
-      const upstream = await fetch(new Request(target.toString(), init));
+      // Re-target the original Request so multipart boundaries and streamed bodies remain intact.
+      const upstreamRequest = new Request(target.toString(), request);
+      const upstream = await fetch(upstreamRequest);
       const responseHeaders = new Headers(upstream.headers);
       for (const [key, value] of Object.entries(headers)) responseHeaders.set(key, value);
       responseHeaders.delete("Set-Cookie");
