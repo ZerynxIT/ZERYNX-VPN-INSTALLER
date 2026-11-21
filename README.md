@@ -5,14 +5,29 @@
 ## راهنمای سریع نصب
 
 1. این مخزن را از مسیر **Settings → Pages → Deploy from a branch → main → /(root) → Save** روی GitHub Pages منتشر کنید.
-2. آدرس GitHub Pages را باز کنید.
-3. روی دکمه‌ی ساخت API Token بزنید. فرم رسمی Cloudflare با دسترسی‌های لازم از قبل پر می‌شود.
-4. وارد Cloudflare شوید، مجوزها را بررسی کنید، **Continue to summary** و سپس **Create Token** را بزنید.
-5. توکن را کپی کنید، به نصاب برگردید و در فیلد Cloudflare API Token قرار دهید.
-6. نام Worker را وارد کنید و **Start installation** را بزنید.
-7. اگر چند حساب Cloudflare دارید، حساب مقصد را انتخاب کنید.
-8. نصاب D1 را می‌سازد، آخرین سورس را می‌خواند، Migrationهای دیتابیس را اجرا می‌کند و Worker را منتشر می‌کند.
-9. پس از Health Check، آدرس Worker نمایش داده می‌شود. پنل را باز کنید و راه‌اندازی اولیه‌ی حساب مدیر را انجام دهید.
+2. یک‌بار **Cloudflare API Bridge** شخصی خودتان را طبق بخش بعدی Deploy کنید. این مرحله ارتباط مرورگر با API رسمی Cloudflare را از مسیر Worker خودتان عبور می‌دهد.
+3. آدرس GitHub Pages نصاب را باز کنید و URL مربوط به Bridge را در فیلد **Cloudflare API Bridge URL** قرار دهید.
+4. روی دکمه‌ی ساخت API Token بزنید. فرم رسمی Cloudflare با دسترسی‌های لازم از قبل پر می‌شود.
+5. وارد Cloudflare شوید، مجوزها را بررسی کنید، **Continue to summary** و سپس **Create Token** را بزنید.
+6. توکن را کپی کنید، به نصاب برگردید و در فیلد Cloudflare API Token قرار دهید.
+7. نام Worker را وارد کنید و **Start installation** را بزنید.
+8. اگر چند حساب Cloudflare دارید، حساب مقصد را انتخاب کنید.
+9. نصاب D1 را می‌سازد، آخرین سورس را می‌خواند، Migrationهای دیتابیس را اجرا می‌کند و Worker را منتشر می‌کند.
+10. پس از Health Check، آدرس Worker نمایش داده می‌شود. پنل را باز کنید و راه‌اندازی اولیه‌ی حساب مدیر را انجام دهید.
+
+## راه‌اندازی یک‌باره‌ی Cloudflare API Bridge
+
+در بعضی مرورگرها یا شبکه‌ها، درخواست مستقیم از GitHub Pages به api.cloudflare.com با خطای عمومی Load failed متوقف می‌شود؛ مرورگر جزئیات دقیق CORS یا قطع اتصال را به JavaScript نمی‌دهد. برای حذف وابستگی به درخواست مستقیم مرورگر، یک Worker واسط در **حساب Cloudflare خودتان** اجرا می‌شود.
+
+1. وارد Cloudflare Dashboard شوید و به **Workers & Pages** بروید.
+2. یک Worker جدید با نامی مثل zerynx-api-bridge بسازید و Deploy اولیه را انجام دهید.
+3. گزینه‌ی **Edit code** را باز کنید، کد کامل فایل [cloudflare-api-bridge.js](./cloudflare-api-bridge.js) همین مخزن را جایگزین کنید و دوباره Deploy بزنید.
+4. آدرس workers.dev همان Worker را کپی کنید؛ فقط دامنه‌ی اصلی را بردارید، مثلاً https://zerynx-api-bridge.example.workers.dev.
+5. این آدرس را در فیلد **Cloudflare API Bridge URL** نصاب قرار دهید. آدرس Bridge در LocalStorage همان مرورگر ذخیره می‌شود و برای Updateهای بعدی باقی می‌ماند.
+
+Bridge فقط درخواست‌های مسیر Cloudflare API v4 را به api.cloudflare.com می‌فرستد، Origin را به دامنه‌ی رسمی GitHub Pages محدود می‌کند و هیچ API Token یا محتوای درخواست را ذخیره یا لاگ نمی‌کند. توکن در مرورگر وارد می‌شود و فقط برای همان درخواست از طریق HTTPS به Worker شخصی شما فرستاده می‌شود. اگر این مخزن را Fork کرده‌اید یا دامنه‌ی Pages را تغییر داده‌اید، مقدار ALLOWED_ORIGIN در ابتدای فایل Bridge را به Origin دقیق سایت خودتان تغییر دهید.
+
+این Bridge یک پراکسی عمومیِ دلخواه نیست: مقصد upstream ثابت است و فقط مسیر /client/v4/ پذیرفته می‌شود. اگر خود دامنه‌ی workers.dev یا api.cloudflare.com در شبکه مسدود باشد، Bridge به‌تنهایی محدودیت شبکه را رفع نمی‌کند؛ در آن حالت باید اتصال شبکه بررسی شود.
 
 ## دسترسی‌های API Token
 
@@ -117,7 +132,7 @@ ON zx_users(enabled);
 - برای Update باید از همان مرورگر/دستگاه استفاده کنید. پاک‌شدن LocalStorage باعث می‌شود نصاب دیگر D1 ID قبلی را نشناسد.
 - درخواست‌های GET دارای timeout و retry محدود هستند. ساخت D1، اجرای Migration و Deploy خودکار تکرار نمی‌شوند تا از اجرای دوباره‌ی عملیات جلوگیری شود.
 - اگر حساب workers.dev subdomain نداشته باشد، باید آن را از داشبورد Cloudflare فعال کنید.
-- اگر CORS یا محدودیت شبکه درخواست مستقیم مرورگر به Cloudflare/GitHub را مسدود کند، retry به‌تنهایی مشکل را برطرف نمی‌کند.
+- درخواست‌های Cloudflare API از طریق API Bridge شخصی عبور می‌کنند؛ GitHub source و Health Check همچنان باید از مرورگر قابل دسترسی باشند. اگر خود شبکه دسترسی به GitHub یا workers.dev را مسدود کند، نصاب نمی‌تواند آن محدودیت بیرونی را حذف کند.
 - توکن را فقط در دامنه‌ی رسمی GitHub Pages خودتان وارد کنید؛ کد صفحه به توکن دسترسی موقت دارد.
 
 ## لینک‌ها
