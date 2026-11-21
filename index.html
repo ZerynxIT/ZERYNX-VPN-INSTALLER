@@ -137,6 +137,8 @@ async function request(url,options={},timeout=60000,retries=0){
    event.responseType=response.headers.get("content-type")||"";
    event.cfRay=response.headers.get("cf-ray")||"";
    event.server=response.headers.get("server")||"";
+   event.relayRequestId=response.headers.get("x-zerynx-request-id")||"";
+   event.upstreamAttempts=response.headers.get("x-zerynx-upstream-attempts")||"";
    event.durationMs=Date.now()-started;
    diagnosticEvents.push(event);
    if(diagnosticEvents.length>80)diagnosticEvents.shift();
