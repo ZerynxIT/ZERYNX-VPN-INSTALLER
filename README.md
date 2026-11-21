@@ -33,16 +33,17 @@ Bridge فقط درخواست‌های مسیر Cloudflare API v4 را به api.c
 
 ## دسترسی‌های API Token
 
-لینک ساخت توکن، این دسترسی‌ها را در فرم Cloudflare از قبل انتخاب می‌کند:
+لینک ساخت توکن، سه دسترسی لازم برای نصب مستقیم را در فرم Cloudflare از قبل انتخاب می‌کند:
 
 | Scope | Permission | کاربرد |
 |---|---|---|
 | Account | Account Settings — Read | شناسایی حساب مقصد |
 | Account | D1 — Edit | ساخت دیتابیس و اجرای SQL Migrationها |
 | Account | Workers Scripts — Edit | آپلود و انتشار Worker و Assets |
-| Account | Workers Builds Configuration — Edit | خواندن و به‌روزرسانی تنظیمات Build متصل به GitHub |
 
-Cloudflare پس از ورود، فرم را به کاربر نشان می‌دهد. کاربر باید خودش دسترسی‌ها را بررسی و تأیید کند و توکن را بسازد. لینک به‌تنهایی توکن ایجاد نمی‌کند و هیچ دسترسی‌ای بدون تأیید کاربر اعطا نمی‌شود. برای API مربوط به Workers Builds، توکن باید از بخش **My Profile → API Tokens** ساخته شود (User-scoped؛ نه Account-owned API Token) و مجوز **Workers Builds Configuration — Edit** نیز در آن باشد. مجوز **Workers Scripts — Edit** نصاب برای انتشار مستقیم Worker استفاده می‌شود.
+**دسترسی اختیاری:** Workers Builds Configuration — Edit فقط برای همگام‌سازی تنظیمات Build یک Worker که از قبل به همین ریپوی GitHub متصل شده باشد لازم است. این مجوز در لینک پیش‌فرض اجباری نیست؛ اگر آن را اضافه نکنی، نصب و انتشار مستقیم همچنان کار می‌کند و فقط همگام‌سازی تنظیمات Builds رد می‌شود.
+
+Cloudflare پس از ورود، فرم را به کاربر نشان می‌دهد. کاربر باید خودش دسترسی‌ها را بررسی و تأیید کند و توکن را بسازد. لینک به‌تنهایی توکن ایجاد نمی‌کند و هیچ دسترسی‌ای بدون تأیید کاربر اعطا نمی‌شود. برای استفاده از API مربوط به Workers Builds، توکن باید از بخش **My Profile → API Tokens** ساخته شود (User-scoped؛ نه Account-owned API Token) و مجوز **Workers Builds Configuration — Edit** نیز در آن باشد. مجوز **Workers Scripts — Edit** نصاب برای انتشار مستقیم Worker استفاده می‌شود.
 
 ## راهنمای به‌روزرسانی
 
