@@ -162,10 +162,62 @@ async function cf(path,opts={},config={}){
  if(!res.ok||!j.success)throw new Error(tr("apiError")+(j.errors||[]).map(x=>x.message).join(" | ")||"HTTP "+res.status);
  return j.result;
 }
-async function getJson(url){
- const r=await request(url,{cache:"no-store"},45000,2);
- if(!r.ok)throw new Error("Source download failed ("+r.status+"): "+url);
- return r;
+async function getJson(url,headers={}){const r=await request(url,{cache:"no-store",headers},60000,2);if(!r.ok)throw new Error("Download failed ("+r.status+"): "+url);return r}
+function parseRepoToml(t){
+ const main=(t.match(/^\s*main\s*=\s*["']([^"']+)["']/m)||[])[1];
+ const date=(t.match(/^\s*compatibility_date\s*=\s*["']([^"']+)["']/m)||[])[1]||"2025-11-01";
+ const assetBlock=(t.match(/^\[assets\]([\s\S]*?)(?=^\[|\s*$)/m)||[])[1]||"";
+ const assetsDir=(assetBlock.match(/^\s*directory\s*=\s*["']([^"']+)["']/m)||[])[1]||"";
+ const assetsBinding=(assetBlock.match(/^\s*binding\s*=\s*["']([^"']+)["']/m)||[])[1]||"ASSETS";
+ const d1Blocks=[...t.matchAll(/^\[\[d1_databases\]\]([\s\S]*?)(?=^\[|\s*$)/gm)];
+ if(d1Blocks.length!==1)throw new Error("Exactly one D1 database binding is required in wrangler.toml.");
+ const d1Binding=(d1Blocks[0][1].match(/^\s*binding\s*=\s*["']([^"']+)["']/m)||[])[1];
+ if(!main||!d1Binding)throw new Error("wrangler.toml must define main and a D1 binding.");
+ return {main,date,assetsDir,assetsBinding,d1Binding};
+}
+async function getRepoSnapshot(){
+ log("Reading latest ZERYNX-VPN commit and repository tree...");
+ const commitJson=await (await getJson("https://api.github.com/repos/ZerynxIT/ZERYNX-VPN/commits/main",{Accept:"application/vnd.github+json"})).json();
+ const commit=commitJson.sha,treeSha=commitJson.commit&&commitJson.commit.tree&&commitJson.commit.tree.sha;
+ if(!commit||!treeSha)throw new Error("Could not resolve latest repository commit.");
+ const tree=await (await getJson("https://api.github.com/repos/ZerynxIT/ZERYNX-VPN/git/trees/"+treeSha+"?recursive=1",{Accept:"application/vnd.github+json"})).json();
+ if(tree.truncated)throw new Error("GitHub returned a truncated repository tree; deployment stopped to avoid missing files.");
+ const entries=(tree.tree||[]).filter(x=>x.type==="blob");
+ const wr=entries.find(x=>x.path==="wrangler.toml");
+ if(!wr)throw new Error("wrangler.toml not found in source repository.");
+ const cfg=parseRepoToml(await (await getJson("https://raw.githubusercontent.com/ZerynxIT/ZERYNX-VPN/"+commit+"/wrangler.toml")).text());
+ const sourceDir=cfg.main.split("/").slice(0,-1).join("/")+"/";
+ const modules=entries.filter(x=>(x.path===cfg.main||x.path.startsWith(sourceDir))&&/\.(js|mjs|json|wasm|txt|html|bin)$/i.test(x.path));
+ if(!modules.some(x=>x.path===cfg.main))throw new Error("Configured Worker entry point is missing: "+cfg.main);
+ const assets=cfg.assetsDir?entries.filter(x=>x.path.startsWith(cfg.assetsDir.replace(/\/$/,"")+"/")):[];
+ const migrations=entries.filter(x=>/^migrations\/[0-9A-Za-z_.-]+\.sql$/i.test(x.path)).sort((a,b)=>a.path.localeCompare(b.path));
+ const wanted=new Map();[...modules,...assets,...migrations].forEach(x=>wanted.set(x.path,x));
+ const files=[];
+ for(const item of wanted.values()){
+  const response=await getJson("https://raw.githubusercontent.com/ZerynxIT/ZERYNX-VPN/"+commit+"/"+item.path);
+  files.push({path:item.path,bytes:await response.arrayBuffer(),sha:item.sha});
+  log("Fetched "+item.path,"ok");
+ }
+ const pick=arr=>files.filter(f=>arr.some(x=>x.path===f.path));
+ return {commit,cfg,modules:pick(modules),assets:pick(assets),migrations:pick(migrations)};
+}
+function workerModuleMime(path){const e=path.split(".").pop().toLowerCase();return e==="js"||e==="mjs"?"application/javascript+module":e==="json"?"application/json":e==="wasm"?"application/wasm":e==="html"?"text/html":e==="txt"?"text/plain":"application/octet-stream"}
+async function applyD1Migrations(accountId,dbId,migrations){
+ const endpoint="/accounts/"+accountId+"/d1/database/"+dbId+"/query";
+ await cf(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sql:"CREATE TABLE IF NOT EXISTS __zerynx_installer_migrations (name TEXT PRIMARY KEY, checksum TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"})},{timeout:90000});
+ const response=await cf(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sql:"SELECT name, checksum FROM __zerynx_installer_migrations"})},{timeout:90000});
+ const first=Array.isArray(response)?response[0]:response;
+ const done=new Map(((first&&first.results)||[]).map(x=>[x.name,x.checksum]));
+ for(const migration of migrations){
+  const name=migration.path.substring("migrations/".length);
+  if(done.has(name)){if(done.get(name)!==migration.sha)throw new Error("Migration "+name+" was changed after being applied. Add a new migration file; do not edit an applied migration.");continue}
+  const sql=new TextDecoder().decode(migration.bytes).trim();
+  if(!sql)throw new Error("Empty migration: "+name);
+  log("Applying D1 migration "+name+"...");
+  await cf(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({batch:[{sql},{sql:"INSERT INTO __zerynx_installer_migrations (name, checksum) VALUES (?, ?)",params:[name,migration.sha]}]})},{timeout:120000});
+  log("Migration applied: "+name,"ok");
+ }
+ if(!migrations.length)log("No SQL migrations found. Existing D1 schema and data remain unchanged.","ok");
 }
 function b64(buf){let s="";const a=new Uint8Array(buf);for(let i=0;i<a.length;i+=0x8000)s+=String.fromCharCode.apply(null,a.subarray(i,i+0x8000));return btoa(s)}
 async function digest(file){const ext=file.path.split(".").pop().toLowerCase();const encoded=b64(file.bytes);const input=new TextEncoder().encode(encoded+ext);const hash=await crypto.subtle.digest("SHA-256",input);return{hash:Array.from(new Uint8Array(hash)).map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,32),encoded}}
@@ -190,56 +242,63 @@ async function deploy(token,updating){
  let account;
  if(updating){
   if(!saved||saved.workerName!==name)throw new Error(tr("savedMissing"));
-  account=accounts.find(a=>a.id===saved.accountId);
+  account=accounts.find(x=>x.id===saved.accountId);
   if(!account)throw new Error(tr("wrongAccount"));
  }else{
   account=accounts[0];
-  if(accounts.length>1){
-   const choice=prompt(tr("pickAccount")+"\n"+accounts.map(a=>a.name+" — "+a.id).join("\n"));
-   if(!choice)throw new Error(tr("cancelAccount"));
-   account=accounts.find(a=>a.id===choice.trim());
-   if(!account)throw new Error(tr("accountInvalid"));
-  }
+  if(accounts.length>1){const choice=prompt(tr("pickAccount")+"\n"+accounts.map(x=>x.name+" — "+x.id).join("\n"));if(!choice)throw new Error(tr("cancelAccount"));account=accounts.find(x=>x.id===choice.trim());if(!account)throw new Error(tr("accountInvalid"))}
  }
  log(tr("accountChosen")+account.name,"ok");
  let dbId,dbName;
- if(updating){
-  dbId=saved.databaseId;dbName=saved.databaseName;
-  if(!dbId)throw new Error(tr("savedMissing"));
-  log(tr("reuseDb"));
- }else{
+ if(updating){dbId=saved.databaseId;dbName=saved.databaseName;if(!dbId)throw new Error(tr("savedMissing"));log(tr("reuseDb"))}
+ else{
   dbName=("zerynx-"+name).slice(0,48);
   log(tr("creatingDb")+dbName);
-  const d=await cf("/accounts/"+account.id+"/d1/database",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:dbName})},{timeout:90000});
-  dbId=d.uuid;
-  if(!dbId)throw new Error("Cloudflare did not return a D1 database ID.");
+  const created=await cf("/accounts/"+account.id+"/d1/database",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:dbName})},{timeout:90000});
+  dbId=created.uuid;if(!dbId)throw new Error("Cloudflare did not return a D1 database ID.");
   localStorage.setItem(META_KEY,JSON.stringify({accountId:account.id,workerName:name,databaseId:dbId,databaseName:dbName}));
   log(tr("dbReady")+dbId,"ok");
  }
- const files=await loadSource();
- const manifest={},byHash={};
- for(const f of files){const d=await digest(f);f.hash=d.hash;f.encoded=d.encoded;byHash[d.hash]=f;if(f.path.startsWith("worker/public/"))manifest["/"+f.path.replace(/^worker\/public\//,"")]={hash:d.hash,size:f.bytes.byteLength}}
- log(tr("manifest"));
- const session=await cf("/accounts/"+account.id+"/workers/scripts/"+name+"/assets-upload-session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({manifest})},{timeout:90000});
- let completion=session.jwt;
- for(const bucket of(session.buckets||[])){
-  const form=new FormData();
-  for(const hash of bucket){const f=byHash[hash];if(!f)throw new Error("Unknown asset hash: "+hash);form.append(hash,f.encoded)}
-  const rr=await request(API+"/accounts/"+account.id+"/workers/assets/upload?base64=true",{method:"POST",headers:{Authorization:"Bearer "+session.jwt},body:form},90000,0);
-  let jj;try{jj=await rr.json()}catch(e){throw new Error("Asset upload returned invalid JSON.")}
-  if(!rr.ok||!jj.success)throw new Error("Asset upload failed: "+JSON.stringify(jj.errors||jj));
-  if(jj.result&&jj.result.jwt)completion=jj.result.jwt;
+ const source=await getRepoSnapshot();
+ log("Latest source commit: "+source.commit.slice(0,12),"ok");
+ log("Modules: "+source.modules.length+" | Assets: "+source.assets.length+" | SQL migrations: "+source.migrations.length,"ok");
+ await applyD1Migrations(account.id,dbId,source.migrations);
+ const manifest={},assetMap={};
+ for(const f of source.assets){
+  const ext=f.path.split(".").pop().toLowerCase();
+  const bytes=new Uint8Array(f.bytes);let binary="";
+  for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+  const encoded=btoa(binary);
+  const hashBytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(encoded+ext));
+  const hash=Array.from(new Uint8Array(hashBytes)).map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,32);
+  f.encoded=encoded;
+  const relative="/"+f.path.slice(source.cfg.assetsDir.replace(/\/$/,"").length).replace(/^\/+/,"");
+  manifest[relative]={hash,size:f.bytes.byteLength};assetMap[hash]=f;
+ }
+ let completion=null;
+ if(source.cfg.assetsDir){
+  log(tr("manifest"));
+  const session=await cf("/accounts/"+account.id+"/workers/scripts/"+name+"/assets-upload-session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({manifest})},{timeout:90000});
+  completion=session.jwt;
+  for(const bucket of(session.buckets||[])){
+   const formAssets=new FormData();
+   for(const hash of bucket){const asset=assetMap[hash];if(!asset)throw new Error("Unknown asset hash: "+hash);formAssets.append(hash,asset.encoded)}
+   const upload=await request(API+"/accounts/"+account.id+"/workers/assets/upload?base64=true",{method:"POST",headers:{Authorization:"Bearer "+session.jwt},body:formAssets},120000,0);
+   const uploadJson=await upload.json();
+   if(!upload.ok||!uploadJson.success)throw new Error("Assets upload failed: "+JSON.stringify(uploadJson.errors||uploadJson));
+   if(uploadJson.result&&uploadJson.result.jwt)completion=uploadJson.result.jwt;
+  }
   log(tr("assetsReady"),"ok");
  }
- const workerFile=files.find(f=>f.path==="worker/src/index.js");
- const metadata={main_module:"worker.js",compatibility_date:"2025-11-01",bindings:[{type:"d1",name:"DB",database_id:dbId},{type:"assets",name:"ASSETS"}],assets:{jwt:completion,config:{html_handling:"auto-trailing-slash"}}};
+ const metadata={main_module:source.cfg.main,compatibility_date:source.cfg.date,bindings:[{type:"d1",name:source.cfg.d1Binding,database_id:dbId}]};
  const form=new FormData();
+ if(source.cfg.assetsDir){metadata.bindings.push({type:"assets",name:source.cfg.assetsBinding});metadata.assets={jwt:completion,config:{html_handling:"auto-trailing-slash"}}}
  form.append("metadata",new Blob([JSON.stringify(metadata)],{type:"application/json"}));
- form.append("worker.js",new Blob([workerFile.bytes],{type:"application/javascript+module"}),"worker.js");
+ for(const module of source.modules)form.append(module.path,new Blob([module.bytes],{type:workerModuleMime(module.path)}),module.path);
  log(tr("deploying"));
- const put=await request(API+"/accounts/"+account.id+"/workers/scripts/"+name,{method:"PUT",headers:{Authorization:"Bearer "+activeToken},body:form},120000,0);
- let pj;try{pj=await put.json()}catch(e){throw new Error("Deploy returned invalid JSON.")}
- if(!put.ok||!pj.success)throw new Error("Deploy failed: "+JSON.stringify(pj.errors||pj));
+ const put=await request(API+"/accounts/"+account.id+"/workers/scripts/"+name,{method:"PUT",headers:{Authorization:"Bearer "+activeToken},body:form},180000,0);
+ const result=await put.json();
+ if(!put.ok||!result.success)throw new Error("Deploy failed: "+JSON.stringify(result.errors||result));
  log(tr("deployed"),"ok");
  try{await cf("/accounts/"+account.id+"/workers/scripts/"+name+"/subdomain",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:true})},{timeout:45000})}catch(e){log(e.message,"bad")}
  let sub;
@@ -248,15 +307,11 @@ async function deploy(token,updating){
  const url="https://"+name+"."+sub+".workers.dev";
  log(tr("health"));
  let health=null,lastErr=null;
- for(let i=0;i<14;i++){
-  try{const r=await request(url+"/api/health",{cache:"no-store"},20000,0);health=await r.json();if(health.ok&&health.database==="connected")break;lastErr=new Error(JSON.stringify(health))}
-  catch(e){lastErr=e}
-  await new Promise(r=>setTimeout(r,2500));
- }
+ for(let i=0;i<14;i++){try{const response=await request(url+"/api/health",{cache:"no-store"},20000,0);health=await response.json();if(health.ok&&health.database==="connected")break;lastErr=new Error(JSON.stringify(health))}catch(e){lastErr=e}await new Promise(r=>setTimeout(r,2500))}
  if(!health||!health.ok||health.database!=="connected")throw new Error(tr("healthFailed")+(lastErr?lastErr.message:JSON.stringify(health)));
  log(tr("healthOk")+health.version,"ok");
  $("url").href=url;$("url").textContent=url;$("result").style.display="block";
- localStorage.setItem(META_KEY,JSON.stringify({accountId:account.id,workerName:name,databaseId:dbId,databaseName:dbName,subdomain:sub}));
+ localStorage.setItem(META_KEY,JSON.stringify({accountId:account.id,workerName:name,databaseId:dbId,databaseName:dbName,subdomain:sub,sourceCommit:source.commit}));
  log(updating?tr("doneUpdate"):tr("doneInstall"),"ok");
 }
 async function run(isUpdate){
