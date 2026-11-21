@@ -1,158 +1,277 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111f">
-<title>ZERYNX VPN INSTALLER</title>
+<meta name="description" content="Install ZERYNX VPN directly into your own Cloudflare account.">
+<title>ZERYNX VPN — Installer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:dark;--bg:#050b15;--panel:#0b1728;--line:#1b3552;--text:#e8f3ff;--muted:#8ba4bf;--cyan:#25c9ff;--blue:#2878ff;--ok:#35d49a;--bad:#ff6d83}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0%,#102d4a 0,transparent 42%),var(--bg);color:var(--text);font:15px/1.8 Tahoma,Arial,sans-serif;min-height:100vh}
-.wrap{max-width:980px;margin:auto;padding:26px 16px 60px}.top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px}
-.brand{display:flex;align-items:center;gap:12px}.mark{width:46px;height:46px;border:1px solid #27618c;border-radius:13px;display:grid;place-items:center;color:var(--cyan);font-weight:900;font-size:25px;box-shadow:0 0 24px #168dce33}
-h1{font-size:19px;letter-spacing:2px;margin:0}.sub{color:var(--muted);font-size:11px;letter-spacing:2px}
-.pill{border:1px solid var(--line);padding:5px 10px;border-radius:30px;color:var(--muted);font-size:12px}
-.hero,.panel{background:linear-gradient(145deg,#0c1b2d,#091321);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:0 20px 60px #0003}
-.hero{margin-bottom:16px}.hero h2{font-size:25px;margin:0 0 5px}.hero p{color:var(--muted);margin:0}
-.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.panel h3{margin:0 0 15px;font-size:17px}
-label{display:block;color:#b7cce0;font-size:13px;margin:13px 0 6px}input{width:100%;background:#050d18;border:1px solid #24415f;border-radius:11px;padding:13px;color:white;font:inherit;outline:none}input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #25c9ff1c}
-button,.linkbtn{border:0;border-radius:11px;padding:12px 17px;background:linear-gradient(100deg,#137acb,#20b9e8);color:white;font:inherit;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block}
-button:disabled{opacity:.5;cursor:not-allowed}.secondary{background:#13263b;border:1px solid #294763;color:#d7eaff}
-.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}.hint{font-size:12px;color:var(--muted);margin-top:8px}.danger{color:#ffb1bd}.good{color:var(--ok)}
-.steps{display:grid;gap:10px}.step{display:flex;gap:11px;align-items:flex-start;padding:11px;border:1px solid #19344f;border-radius:12px;background:#071321}.num{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#103c5a;color:var(--cyan);font-size:12px;font-weight:bold}.step b{display:block;font-size:13px}.step small{color:var(--muted)}
-.log{margin-top:16px;background:#030912;border:1px solid #1a3047;border-radius:13px;padding:13px;min-height:105px;max-height:240px;overflow:auto;direction:rtl;font:12px/2.1 ui-monospace,monospace;color:#b8d4ed;white-space:pre-wrap}
-.result{display:none;margin-top:16px;border:1px solid #1c7059;background:#09251f;border-radius:14px;padding:16px}.result a{color:#62dbff;direction:ltr;display:block;word-break:break-all}
-.foot{color:#6f88a2;font-size:11px;text-align:center;margin-top:20px}
-@media(max-width:760px){.grid{grid-template-columns:1fr}.hero h2{font-size:21px}.top{align-items:flex-start}.pill{font-size:10px}}
-</style></head>
-<body><main class="wrap">
-<header class="top"><div class="brand"><div class="mark">Z</div><div><h1>ZERYNX</h1><div class="sub">VPN INSTALLER · CLOUDFLARE DEPLOYMENT</div></div></div><span class="pill">Installer v1.0.0</span></header>
-<section class="hero"><h2>راه‌اندازی خودکار ZERYNX VPN</h2><p>ساخت دیتابیس، اتصال D1، انتشار Worker و بررسی سلامت؛ بدون تغییر در ریپوی اصلی شما.</p></section>
-<div class="grid">
-<section class="panel">
-<h3>شروع نصب یا به‌روزرسانی</h3>
-<label for="token">Cloudflare API Token</label><input id="token" type="password" autocomplete="off" placeholder="توکن را اینجا وارد کنید">
-<div class="hint">توکن فقط در حافظه همین صفحه استفاده می‌شود؛ در LocalStorage یا ریپوی شما ذخیره نمی‌شود.</div>
-<label for="worker">نام Worker</label><input id="worker" value="zerynx-vpn" maxlength="63" autocomplete="off">
-<div class="hint">فقط حروف انگلیسی کوچک، عدد و خط تیره؛ ابتدا و انتهای نام نباید خط تیره باشد.</div>
-<div class="actions"><button id="install">شروع نصب خودکار</button><button class="secondary" id="update">به‌روزرسانی پنل</button></div>
-<div class="hint">برای به‌روزرسانی، از همان مرورگر و دستگاهی استفاده کنید که نصب اولیه را انجام داده است.</div>
-<div class="actions"><a class="linkbtn secondary" href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">ساخت API Token</a><a class="linkbtn secondary" href="https://developers.cloudflare.com/fundamentals/api/reference/permissions/" target="_blank" rel="noopener">راهنمای دسترسی‌ها</a></div>
-<div id="result" class="result"><b class="good">عملیات با موفقیت انجام شد.</b><p>آدرس پنل:</p><a id="url" target="_blank" rel="noopener"></a><div class="actions"><button class="secondary" id="copy">کپی آدرس</button></div></div>
+:root{color-scheme:dark;--bg:#050b14;--surface:#0b1726;--surface2:#0e1d30;--line:#1d354d;--text:#edf7ff;--muted:#8da5bb;--cyan:#24c8f4;--blue:#2878ff;--green:#42d6a0;--red:#ff7288;--shadow:0 24px 70px #0006}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 78% -5%,#123654 0,transparent 37%),radial-gradient(ellipse at 0 70%,#09243a 0,transparent 35%),var(--bg);color:var(--text);font-family:"Vazirmatn","Inter",Arial,sans-serif;line-height:1.75}
+html[lang="en"] body{font-family:"Inter","Vazirmatn",Arial,sans-serif}
+button,input{font:inherit}
+a{color:inherit}
+.shell{width:min(1060px,100%);margin:auto;padding:26px 20px 54px}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:26px}
+.brand{display:flex;align-items:center;gap:13px}
+.logo{width:48px;height:48px;display:grid;place-items:center;border:1px solid #2a7295;border-radius:15px;background:linear-gradient(145deg,#102d43,#081725);color:var(--cyan);font-size:27px;font-weight:800;box-shadow:0 0 28px #20c6f433}
+.brand-name{font-size:17px;font-weight:800;letter-spacing:2px;line-height:1.3}
+.brand-sub{font-size:10px;letter-spacing:2px;color:var(--muted)}
+.nav-right{display:flex;align-items:center;gap:9px}
+.version,.lang-btn{border:1px solid var(--line);background:#0b1929;color:#b7cce0;border-radius:999px;padding:7px 12px;font-size:12px}
+.lang-btn{cursor:pointer;color:var(--cyan);font-weight:700}
+.hero{position:relative;overflow:hidden;border:1px solid #234662;border-radius:24px;padding:30px;background:linear-gradient(125deg,#102b42e8,#091624f5 68%);box-shadow:var(--shadow);margin-bottom:17px}
+.hero:after{content:"Z";position:absolute;inset-inline-end:25px;top:-60px;font-size:250px;line-height:1;color:#29c6f408;font-weight:800;pointer-events:none}
+.eyebrow{color:var(--cyan);font-size:11px;font-weight:800;letter-spacing:2px;margin-bottom:8px}
+.hero h1{font-size:clamp(25px,4vw,36px);line-height:1.35;margin:0 0 9px;font-weight:800;max-width:700px}
+.hero p{color:#a9bfd2;max-width:710px;margin:0;font-size:14px}
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(290px,.85fr);gap:17px;align-items:start}
+.card{border:1px solid var(--line);background:linear-gradient(150deg,#0c1b2b,#091421);border-radius:20px;padding:23px;box-shadow:0 18px 55px #0003}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.card h2{font-size:17px;margin:0;font-weight:800}
+.status{display:inline-flex;align-items:center;gap:7px;color:#9cb3c8;font-size:11px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px #42d6a0aa}
+.field-label{display:block;font-size:12px;color:#bfd1e1;margin:15px 0 7px;font-weight:600}
+.input{width:100%;border:1px solid #28445e;background:#050d17;border-radius:12px;padding:13px 14px;color:#f3f9ff;outline:none;transition:.2s}
+.input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #24c8f41a}
+.input::placeholder{color:#5f7890}
+.help{color:var(--muted);font-size:11px;margin-top:7px}
+.btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:17px}
+.btn{border:1px solid transparent;border-radius:12px;padding:11px 17px;min-height:45px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;cursor:pointer;font-size:13px;font-weight:800;transition:transform .15s,border-color .15s,opacity .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:wait;transform:none}
+.primary{background:linear-gradient(105deg,#147ac7,#20bce7);color:white;box-shadow:0 8px 24px #087ab344}
+.secondary{background:#10243a;border-color:#294760;color:#d7e9f8}
+.token-link{width:100%;margin-top:13px;background:#10283a;border-color:#28516c;color:#aeeaff}
+.token-note{border:1px solid #24465d;background:#0a1b2a;border-radius:12px;padding:12px 13px;margin-top:14px;color:#a8bfd2;font-size:11px}
+.token-note strong{color:#d9f4ff}
+.steps{display:grid;gap:10px}
+.step{display:flex;align-items:flex-start;gap:12px;border:1px solid #1b354d;background:#081523;border-radius:13px;padding:12px}
+.step-no{flex:none;width:27px;height:27px;border-radius:9px;display:grid;place-items:center;background:#10334b;color:var(--cyan);font-size:11px;font-weight:800}
+.step b{display:block;font-size:12px;margin:0 0 2px}
+.step small{display:block;color:var(--muted);font-size:10px;line-height:1.6}
+.permission-list{display:grid;gap:7px;margin-top:14px}
+.permission{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #193047;padding:6px 1px;font-size:11px;color:#a9bfd2}
+.permission:last-child{border:0}
+.permission em{font-style:normal;color:var(--cyan);font-weight:700;white-space:nowrap}
+.log-wrap{margin-top:17px}
+.log-title{font-size:11px;color:#91a9bf;margin:0 0 7px}
+.log{min-height:84px;max-height:240px;overflow:auto;background:#030912;border:1px solid #1a3047;border-radius:13px;padding:12px 14px;color:#b9d2e7;font:11px/2 ui-monospace,monospace;white-space:pre-wrap;direction:ltr;text-align:left}
+.log-line.ok{color:var(--green)}.log-line.bad{color:var(--red)}.log-line.info{color:#b9d2e7}
+.result{display:none;margin-top:15px;border:1px solid #226e58;background:#09251f;border-radius:14px;padding:15px}
+.result strong{color:var(--green);font-size:13px}
+.result a{display:block;color:#6cddff;direction:ltr;text-align:left;word-break:break-all;margin-top:5px;font:12px/1.7 ui-monospace,monospace}
+.footer{text-align:center;color:#607990;font-size:10px;margin-top:22px}
+.warning{color:#e4c58d}
+@media(max-width:780px){.grid{grid-template-columns:1fr}.shell{padding:17px 13px 38px}.hero{padding:23px}.card{padding:19px}.nav{margin-bottom:18px}}
+@media(max-width:420px){.version{display:none}.hero h1{font-size:23px}.btn-row .btn{flex:1}.brand-sub{letter-spacing:1px;font-size:9px}}
+</style>
+</head>
+<body>
+<main class="shell">
+<header class="nav">
+ <div class="brand"><div class="logo">Z</div><div><div class="brand-name">ZERYNX</div><div class="brand-sub">VPN · INSTALLATION CENTER</div></div></div>
+ <div class="nav-right"><span class="version">INSTALLER · 1.1</span><button class="lang-btn" id="langToggle" type="button">EN</button></div>
+</header>
+<section class="hero">
+ <div class="eyebrow" data-i18n="eyebrow">CLOUDFLARE · ONE-CLICK DEPLOYMENT</div>
+ <h1 data-i18n="heroTitle">نصب ZERYNX VPN روی حساب Cloudflare خودت</h1>
+ <p data-i18n="heroText">نصاب، آخرین سورس رسمی را دریافت می‌کند، دیتابیس D1 را می‌سازد و Worker را مستقیماً روی حساب خودت منتشر می‌کند. هیچ فایلی در ریپوی اصلی تغییر نمی‌کند.</p>
 </section>
-<aside class="panel">
-<h3>مراحل عملیات</h3><div class="steps">
-<div class="step"><span class="num">01</span><div><b>اعتبارسنجی توکن</b><small>بررسی دسترسی‌ها و حساب Cloudflare</small></div></div>
-<div class="step"><span class="num">02</span><div><b>ساخت یا بازیابی D1</b><small>شناسه دیتابیس مختص حساب شما</small></div></div>
-<div class="step"><span class="num">03</span><div><b>دریافت سورس رسمی</b><small>دریافت فایل‌های آخرین نسخه از ریپوی ZERYNX</small></div></div>
-<div class="step"><span class="num">04</span><div><b>انتشار Worker و Assets</b><small>اتصال DB و ASSETS بدون نوشتن اطلاعات در GitHub</small></div></div>
-<div class="step"><span class="num">05</span><div><b>Health Check</b><small>بررسی واقعی پاسخ API و اتصال D1</small></div></div>
-</div></aside>
+<div class="grid">
+<section class="card">
+ <div class="card-head"><h2 data-i18n="installTitle">اتصال حساب و نصب</h2><span class="status"><i class="dot"></i><span data-i18n="browserOnly">اجرای مستقیم در مرورگر</span></span></div>
+ <label class="field-label" for="token" data-i18n="tokenLabel">Cloudflare API Token</label>
+ <input class="input" id="token" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your Cloudflare API token">
+ <div class="help" data-i18n="tokenHelp">توکن فقط برای همین عملیات در حافظه صفحه استفاده می‌شود و در GitHub یا LocalStorage ذخیره نمی‌شود.</div>
+ <label class="field-label" for="worker" data-i18n="workerLabel">نام Worker</label>
+ <input class="input" id="worker" value="zerynx-vpn" maxlength="63" autocomplete="off" spellcheck="false">
+ <div class="help" data-i18n="workerHelp">فقط حروف کوچک انگلیسی، عدد و خط تیره؛ نام باید با حرف یا عدد شروع و تمام شود.</div>
+ <a class="btn token-link" id="tokenLink" href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer"><span data-i18n="createToken">۱. ساخت توکن با دسترسی‌های آماده در Cloudflare</span><span aria-hidden="true">↗</span></a>
+ <div class="token-note"><strong data-i18n="permissionTitle">دسترسی‌های درخواستی</strong>
+  <div class="permission-list">
+   <div class="permission"><span>Account Settings</span><em>Read</em></div>
+   <div class="permission"><span>D1</span><em>Edit</em></div>
+   <div class="permission"><span>Workers Scripts</span><em>Edit</em></div>
+  </div>
+  <div class="help warning" data-i18n="permissionHelp">هیچ مجوز جداگانه‌ای برای Workers Scripts Read، KV، DNS، Billing یا سایر سرویس‌ها درخواست نمی‌شود. سطح Edit در خود Cloudflare می‌تواند عملیات خواندن/نوشتن همان منبع را پوشش دهد.</div>
+ </div>
+ <div class="btn-row">
+  <button class="btn primary" id="install" type="button" data-i18n="installBtn">۲. شروع نصب</button>
+  <button class="btn secondary" id="update" type="button" data-i18n="updateBtn">به‌روزرسانی نصب قبلی</button>
+ </div>
+ <div class="help" data-i18n="updateHelp">برای Update از همان مرورگر و دستگاه نصب اولیه استفاده کن؛ شناسه دیتابیس قبلی حفظ می‌شود.</div>
+ <div class="result" id="result"><strong data-i18n="successTitle">عملیات با موفقیت انجام شد.</strong><div data-i18n="panelAddress">آدرس پنل:</div><a id="url" target="_blank" rel="noopener noreferrer"></a><div class="btn-row"><button class="btn secondary" id="copy" type="button" data-i18n="copyBtn">کپی آدرس</button></div></div>
+</section>
+<aside class="card">
+ <div class="card-head"><h2 data-i18n="flowTitle">روند راه‌اندازی</h2></div>
+ <div class="steps">
+  <div class="step"><span class="step-no">01</span><div><b data-i18n="s1t">ورود و ساخت توکن</b><small data-i18n="s1d">Cloudflare فرم توکن را با دسترسی‌های لازم از قبل پر می‌کند؛ خودت آن را بررسی و تأیید می‌کنی.</small></div></div>
+  <div class="step"><span class="step-no">02</span><div><b data-i18n="s2t">بررسی توکن</b><small data-i18n="s2d">اعتبار توکن و حساب مقصد بررسی می‌شود.</small></div></div>
+  <div class="step"><span class="step-no">03</span><div><b data-i18n="s3t">دریافت سورس رسمی</b><small data-i18n="s3d">فایل‌های آخرین نسخه از مخزن عمومی ZERYNX دریافت می‌شوند.</small></div></div>
+  <div class="step"><span class="step-no">04</span><div><b data-i18n="s4t">ساخت D1 و انتشار Worker</b><small data-i18n="s4d">دیتابیس و فایل‌های پنل روی حساب Cloudflare خودت مستقر می‌شوند.</small></div></div>
+  <div class="step"><span class="step-no">05</span><div><b data-i18n="s5t">تست نهایی</b><small data-i18n="s5d">پاسخ Worker و اتصال واقعی D1 بررسی می‌شود.</small></div></div>
+ </div>
+ <div class="token-note"><strong data-i18n="privacyTitle">حریم خصوصی و کنترل دسترسی</strong><div class="help" data-i18n="privacyText">توکن را فقط در صفحه رسمی GitHub Pages خودت وارد کن. نصاب توکن را در سرور یا مخزن ذخیره نمی‌کند. پس از نصب می‌توانی توکن را از Cloudflare لغو کنی؛ برای Update بعدی باید توکن تازه بسازی.</div></div>
+</aside>
 </div>
-<div class="log" id="log" aria-live="polite">آماده. توکن را فقط در همین صفحه وارد کنید.</div>
-<div class="foot">ZERYNX-VPN-INSTALLER · Source: github.com/ZerynxIT/ZERYNX-VPN · Copyright © ZERYNX</div>
+<div class="log-wrap"><div class="log-title" data-i18n="activity">گزارش عملیات</div><div class="log" id="log" aria-live="polite">Ready. Create a token, paste it above, then start.</div></div>
+<footer class="footer">ZERYNX-VPN-INSTALLER · SOURCE: GITHUB.COM/ZERYNXIT/ZERYNX-VPN · © ZERYNX</footer>
 </main>
 <script>
-(() => {
-'use strict';
+(function(){
+"use strict";
 const $=id=>document.getElementById(id);
-const API='https://api.cloudflare.com/client/v4';
-const RAW='https://raw.githubusercontent.com/ZerynxIT/ZERYNX-VPN/main/';
-const META_KEY='zerynx_installer_deployment_v1';
-let activeToken='';
-function log(s,kind=''){const el=$('log');const line=document.createElement('div');line.textContent=(kind==='ok'?'✓ ':kind==='bad'?'✕ ':'› ')+s;line.style.color=kind==='ok'?'#55dda9':kind==='bad'?'#ff8295':'#b8d4ed';el.appendChild(line);el.scrollTop=el.scrollHeight}
-function setBusy(v){$('install').disabled=v;$('update').disabled=v}
+const API="https://api.cloudflare.com/client/v4";
+const RAW="https://raw.githubusercontent.com/ZerynxIT/ZERYNX-VPN/main/";
+const META_KEY="zerynx_installer_deployment_v1";
+const TOKEN_URL="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&accountId=%2A&zoneId=all&name=ZERYNX%20VPN%20Installer";
+const messages={
+fa:{eyebrow:"CLOUDFLARE · ONE-CLICK DEPLOYMENT",heroTitle:"نصب ZERYNX VPN روی حساب Cloudflare خودت",heroText:"نصاب، آخرین سورس رسمی را دریافت می‌کند، دیتابیس D1 را می‌سازد و Worker را مستقیماً روی حساب خودت منتشر می‌کند. هیچ فایلی در ریپوی اصلی تغییر نمی‌کند.",installTitle:"اتصال حساب و نصب",browserOnly:"اجرای مستقیم در مرورگر",tokenLabel:"Cloudflare API Token",tokenHelp:"توکن فقط برای همین عملیات در حافظه صفحه استفاده می‌شود و در GitHub یا LocalStorage ذخیره نمی‌شود.",workerLabel:"نام Worker",workerHelp:"فقط حروف کوچک انگلیسی، عدد و خط تیره؛ نام باید با حرف یا عدد شروع و تمام شود.",createToken:"۱. ساخت توکن با دسترسی‌های آماده در Cloudflare",permissionTitle:"دسترسی‌های درخواستی",permissionHelp:"هیچ مجوز جداگانه‌ای برای Workers Scripts Read، KV، DNS، Billing یا سایر سرویس‌ها درخواست نمی‌شود. سطح Edit در خود Cloudflare می‌تواند عملیات خواندن/نوشتن همان منبع را پوشش دهد.",installBtn:"۲. شروع نصب",updateBtn:"به‌روزرسانی نصب قبلی",updateHelp:"برای Update از همان مرورگر و دستگاه نصب اولیه استفاده کن؛ شناسه دیتابیس قبلی حفظ می‌شود.",successTitle:"عملیات با موفقیت انجام شد.",panelAddress:"آدرس پنل:",copyBtn:"کپی آدرس",flowTitle:"روند راه‌اندازی",s1t:"ورود و ساخت توکن",s1d:"Cloudflare فرم توکن را با دسترسی‌های لازم از قبل پر می‌کند؛ خودت آن را بررسی و تأیید می‌کنی.",s2t:"بررسی توکن",s2d:"اعتبار توکن و حساب مقصد بررسی می‌شود.",s3t:"دریافت سورس رسمی",s3d:"فایل‌های آخرین نسخه از مخزن عمومی ZERYNX دریافت می‌شوند.",s4t:"ساخت D1 و انتشار Worker",s4d:"دیتابیس و فایل‌های پنل روی حساب Cloudflare خودت مستقر می‌شوند.",s5t:"تست نهایی",s5d:"پاسخ Worker و اتصال واقعی D1 بررسی می‌شود.",privacyTitle:"حریم خصوصی و کنترل دسترسی",privacyText:"توکن را فقط در صفحه رسمی GitHub Pages خودت وارد کن. نصاب توکن را در سرور یا مخزن ذخیره نمی‌کند. پس از نصب می‌توانی توکن را از Cloudflare لغو کنی؛ برای Update بعدی باید توکن تازه بسازی.",activity:"گزارش عملیات",ready:"آماده. توکن را از Cloudflare بساز، اینجا وارد کن و نصب را شروع کن.",tokenRequired:"ابتدا API Token را وارد کن.",workerInvalid:"نام Worker معتبر نیست. فقط حروف کوچک انگلیسی، عدد و خط تیره مجاز است.",verify:"در حال بررسی API Token...",tokenInvalid:"توکن فعال نیست یا مجوزهای لازم را ندارد.",noAccounts:"با این توکن هیچ حساب Cloudflare قابل دسترسی نیست.",pickAccount:"چند حساب پیدا شد. شماره حساب مقصد را از فهرست انتخاب کن:",cancelAccount:"انتخاب حساب لغو شد.",accountInvalid:"شناسه حساب انتخاب‌شده معتبر نیست.",accountChosen:"حساب مقصد انتخاب شد: ",creatingDb:"در حال ساخت دیتابیس D1: ",dbReady:"دیتابیس ساخته شد: ",reuseDb:"از دیتابیس نصب قبلی استفاده می‌شود؛ داده‌های آن حفظ می‌شوند.",fetchSource:"در حال دریافت فایل‌های نسخه رسمی...",sourceReady:"دریافت شد: ",manifest:"در حال آماده‌سازی فایل‌های پنل...",uploading:"در حال آپلود فایل‌های پنل...",assetsReady:"فایل‌های استاتیک آپلود شدند.",deploying:"در حال انتشار Worker و اتصال DB و ASSETS...",deployed:"Worker منتشر شد.",subdomainMissing:"ساب‌دامین workers.dev برای این حساب فعال نیست. از داشبورد Cloudflare آن را فعال کن و سپس Update را اجرا کن.",health:"در حال بررسی اتصال Worker و D1...",healthOk:"اتصال D1 تأیید شد. نسخه: ",doneInstall:"نصب کامل شد.",doneUpdate:"به‌روزرسانی کامل شد؛ دیتابیس قبلی حفظ شد.",timeout:"درخواست بیش از زمان مجاز طول کشید. دوباره تلاش کن؛ عملیات امن GET به‌صورت خودکار دوباره امتحان می‌شود.",network:"ارتباط با Cloudflare برقرار نشد. شبکه، فیلترشکن یا محدودیت CORS مرورگر را بررسی کن.",apiError:"خطای Cloudflare: ",healthFailed:"Worker منتشر شد، اما Health Check موفق نبود: ",savedMissing:"اطلاعات نصب قبلی در این مرورگر پیدا نشد. Update را با همان مرورگر نصب اولیه اجرا کن.",wrongAccount:"حساب نصب قبلی با این توکن در دسترس نیست.",copyDone:"آدرس کپی شد."},
+en:{eyebrow:"CLOUDFLARE · ONE-CLICK DEPLOYMENT",heroTitle:"Install ZERYNX VPN in your own Cloudflare account",heroText:"The installer fetches the latest official source, creates your D1 database, and deploys the Worker directly to your Cloudflare account. Your main repository is never modified.",installTitle:"Connect account & install",browserOnly:"Runs in your browser",tokenLabel:"Cloudflare API Token",tokenHelp:"The token is held in page memory only. It is never saved to GitHub or LocalStorage.",workerLabel:"Worker name",workerHelp:"Use lowercase English letters, numbers, and hyphens. The name must start and end with a letter or number.",createToken:"1. Create a token with prefilled Cloudflare permissions",permissionTitle:"Requested permissions",permissionHelp:"No separate Workers Scripts Read, KV, DNS, Billing, or unrelated permissions are requested. Cloudflare's Edit permission may include read/write operations for that specific resource.",installBtn:"2. Start installation",updateBtn:"Update existing installation",updateHelp:"Run updates in the same browser and device used for the initial installation. Your existing database ID is reused.",successTitle:"Operation completed successfully.",panelAddress:"Your panel URL:",copyBtn:"Copy URL",flowTitle:"Installation flow",s1t:"Sign in and create token",s1d:"Cloudflare opens a token form with the required permissions prefilled. Review and approve it yourself.",s2t:"Validate token",s2d:"The token and destination account are verified.",s3t:"Fetch official source",s3d:"The latest files are fetched from the public ZERYNX repository.",s4t:"Create D1 and deploy Worker",s4d:"Your database and panel assets are deployed to your Cloudflare account.",s5t:"Final health check",s5d:"The Worker response and live D1 connection are checked.",privacyTitle:"Privacy & access control",privacyText:"Only paste your token into your official GitHub Pages installer URL. The installer does not store it on a server or in the repository. You may revoke it in Cloudflare after installation; create a fresh token for future updates.",activity:"Activity log",ready:"Ready. Create a token in Cloudflare, paste it here, and start installation.",tokenRequired:"Please enter your API token first.",workerInvalid:"Invalid Worker name. Use lowercase English letters, numbers, and hyphens only.",verify:"Validating API token...",tokenInvalid:"The token is inactive or missing required permissions.",noAccounts:"No Cloudflare accounts are accessible with this token.",pickAccount:"Multiple accounts found. Choose the destination account number:",cancelAccount:"Account selection cancelled.",accountInvalid:"The selected account ID is invalid.",accountChosen:"Destination account: ",creatingDb:"Creating D1 database: ",dbReady:"Database created: ",reuseDb:"Reusing the previous database. Existing data will be preserved.",fetchSource:"Fetching official release files...",sourceReady:"Fetched: ",manifest:"Preparing panel asset manifest...",uploading:"Uploading panel assets...",assetsReady:"Static assets uploaded.",deploying:"Deploying Worker and attaching DB and ASSETS...",deployed:"Worker deployed.",subdomainMissing:"A workers.dev subdomain is not enabled for this account. Enable it in the Cloudflare dashboard, then run Update.",health:"Checking Worker and D1 connectivity...",healthOk:"D1 connection verified. Version: ",doneInstall:"Installation complete.",doneUpdate:"Update complete. Your existing database was preserved.",timeout:"The request exceeded the time limit. Try again; safe GET requests are retried automatically.",network:"Could not reach Cloudflare. Check your network, VPN, or browser CORS restrictions.",apiError:"Cloudflare error: ",healthFailed:"Worker deployed, but the health check failed: ",savedMissing:"Previous installation data was not found in this browser. Run Update in the same browser used for installation.",wrongAccount:"The original account is not accessible with this token.",copyDone:"URL copied."}
+};
+let lang="fa",activeToken="";
+function tr(k){return messages[lang][k]||messages.en[k]||k}
+function setLanguage(next){lang=next;document.documentElement.lang=next;document.documentElement.dir=next==="fa"?"rtl":"ltr";$("langToggle").textContent=next==="fa"?"EN":"FA";document.querySelectorAll("[data-i18n]").forEach(el=>{const k=el.getAttribute("data-i18n");if(messages[next][k])el.textContent=messages[next][k]});$("log").textContent=tr("ready");}
+$("langToggle").addEventListener("click",()=>setLanguage(lang==="fa"?"en":"fa"));
+$("tokenLink").href=TOKEN_URL;
+function log(text,kind="info"){const el=$("log");const line=document.createElement("div");line.className="log-line "+kind;line.textContent=(kind==="ok"?"✓ ":kind==="bad"?"✕ ":"› ")+text;el.appendChild(line);el.scrollTop=el.scrollHeight}
+function setBusy(v){$("install").disabled=v;$("update").disabled=v}
 function safeName(s){return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(s)}
-async function cf(path,opts={}) {
- const res=await fetch(API+path,{...opts,headers:{Authorization:'Bearer '+activeToken,...(opts.headers||{})}});
- let j;try{j=await res.json()}catch{throw new Error('پاسخ Cloudflare قابل خواندن نبود؛ احتمالاً محدودیت CORS یا خطای شبکه است.')}
- if(!res.ok||!j.success)throw new Error((j.errors||[]).map(x=>x.message).join(' | ')||`Cloudflare API ${res.status}`);
+function timedFetch(url,options={},timeout=60000){
+ return new Promise((resolve,reject)=>{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeout);fetch(url,{...options,signal:controller.signal}).then(resolve,reject).finally(()=>clearTimeout(timer)).catch(err=>{clearTimeout(timer);reject(err)})});
+}
+async function request(url,options={},timeout=60000,retries=0){
+ let last;
+ for(let attempt=0;attempt<=retries;attempt++){
+  try{return await timedFetch(url,options,timeout)}
+  catch(e){last=e;if(attempt<retries)await new Promise(r=>setTimeout(r,900*(attempt+1)))}
+ }
+ if(last&&last.name==="AbortError")throw new Error(tr("timeout"));
+ throw new Error(tr("network")+" ("+(last&&last.message?last.message:"network error")+")");
+}
+async function cf(path,opts={},config={}){
+ const isGet=!opts.method||opts.method.toUpperCase()==="GET";
+ const res=await request(API+path,{...opts,headers:{Authorization:"Bearer "+activeToken,...(opts.headers||{})}},config.timeout||60000,isGet?2:0);
+ let j;try{j=await res.json()}catch(e){throw new Error("Cloudflare returned an unreadable response ("+res.status+").")}
+ if(!res.ok||!j.success)throw new Error(tr("apiError")+(j.errors||[]).map(x=>x.message).join(" | ")||"HTTP "+res.status);
  return j.result;
 }
-async function getJson(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('دریافت سورس ناموفق بود: '+url);return r}
-function b64(buf){let s='';const a=new Uint8Array(buf);for(let i=0;i<a.length;i+=0x8000)s+=String.fromCharCode(...a.subarray(i,i+0x8000));return btoa(s)}
-async function digest(file){const ext=file.path.split('.').pop().toLowerCase();const encoded=b64(file.bytes);const input=new TextEncoder().encode(encoded+ext);const hash=await crypto.subtle.digest('SHA-256',input);return {hash:[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,32),encoded}}
+async function getJson(url){
+ const r=await request(url,{cache:"no-store"},45000,2);
+ if(!r.ok)throw new Error("Source download failed ("+r.status+"): "+url);
+ return r;
+}
+function b64(buf){let s="";const a=new Uint8Array(buf);for(let i=0;i<a.length;i+=0x8000)s+=String.fromCharCode.apply(null,a.subarray(i,i+0x8000));return btoa(s)}
+async function digest(file){const ext=file.path.split(".").pop().toLowerCase();const encoded=b64(file.bytes);const input=new TextEncoder().encode(encoded+ext);const hash=await crypto.subtle.digest("SHA-256",input);return{hash:Array.from(new Uint8Array(hash)).map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,32),encoded}}
+function mime(p){return p.endsWith(".html")?"text/html":p.endsWith(".svg")?"image/svg+xml":p.endsWith(".jpg")?"image/jpeg":"application/javascript+module"}
 async function loadSource(){
- log('دریافت Worker و فایل‌های پنل از مخزن رسمی...');
- const paths=['worker/src/index.js','worker/public/index.html','worker/public/assets/logo.svg','worker/public/assets/banner.jpg'];
+ log(tr("fetchSource"));
+ const paths=["worker/src/index.js","worker/public/index.html","worker/public/assets/logo.svg","worker/public/assets/banner.jpg"];
  const files=[];
- for(const path of paths){const r=await getJson(RAW+path);files.push({path,bytes:await r.arrayBuffer(),type:r.headers.get('content-type')||mime(path)});log('دریافت شد: '+path,'ok')}
+ for(const path of paths){const r=await getJson(RAW+path);files.push({path,bytes:await r.arrayBuffer(),type:r.headers.get("content-type")||mime(path)});log(tr("sourceReady")+path,"ok")}
  return files;
 }
-function mime(p){return p.endsWith('.html')?'text/html':p.endsWith('.svg')?'image/svg+xml':p.endsWith('.jpg')?'image/jpeg':'application/javascript+module'}
 async function deploy(token,updating){
  activeToken=token;
- const name=$('worker').value.trim().toLowerCase();
- if(!safeName(name))throw new Error('نام Worker معتبر نیست.');
- log('اعتبارسنجی API Token...');
- const verify=await cf('/user/tokens/verify');if(verify.status!=='active')throw new Error('توکن فعال نیست.');
- const accounts=await cf('/accounts?per_page=50');
- if(!accounts.length)throw new Error('این توکن به هیچ حساب Cloudflare دسترسی ندارد.');
- let saved=null;try{saved=JSON.parse(localStorage.getItem(META_KEY)||'null')}catch{}
+ const name=$("worker").value.trim().toLowerCase();
+ if(!safeName(name))throw new Error(tr("workerInvalid"));
+ log(tr("verify"));
+ const verify=await cf("/user/tokens/verify");
+ if(verify.status!=="active")throw new Error(tr("tokenInvalid"));
+ const accounts=await cf("/accounts?per_page=50");
+ if(!accounts||!accounts.length)throw new Error(tr("noAccounts"));
+ let saved=null;try{saved=JSON.parse(localStorage.getItem(META_KEY)||"null")}catch(e){}
  let account;
  if(updating){
-   if(!saved||saved.workerName!==name)throw new Error('اطلاعات نصب قبلی در این مرورگر پیدا نشد یا نام Worker متفاوت است. نصب اولیه را با همین مرورگر انجام دهید.');
-   account=accounts.find(a=>a.id===saved.accountId);if(!account)throw new Error('حساب نصب قبلی با این توکن در دسترس نیست.');
+  if(!saved||saved.workerName!==name)throw new Error(tr("savedMissing"));
+  account=accounts.find(a=>a.id===saved.accountId);
+  if(!account)throw new Error(tr("wrongAccount"));
  }else{
-   account=accounts.length===1?accounts[0]:accounts[0];
-   if(accounts.length>1){const choice=prompt('چند حساب پیدا شد. Account ID حساب مقصد را وارد کنید:\n'+accounts.map(a=>a.name+' — '+a.id).join('\n'));if(!choice)throw new Error('انتخاب حساب لغو شد.');account=accounts.find(a=>a.id===choice.trim());if(!account)throw new Error('Account ID انتخاب‌شده معتبر نیست.')}
+  account=accounts[0];
+  if(accounts.length>1){
+   const choice=prompt(tr("pickAccount")+"\n"+accounts.map(a=>a.name+" — "+a.id).join("\n"));
+   if(!choice)throw new Error(tr("cancelAccount"));
+   account=accounts.find(a=>a.id===choice.trim());
+   if(!account)throw new Error(tr("accountInvalid"));
+  }
  }
- log('حساب انتخاب شد: '+account.name,'ok');
+ log(tr("accountChosen")+account.name,"ok");
  let dbId,dbName;
- if(updating){dbId=saved.databaseId;dbName=saved.databaseName;log('استفاده مجدد از دیتابیس قبلی؛ هیچ دیتایی حذف نمی‌شود.')}
- else{
-   dbName=('zerynx-'+name).slice(0,48);
-   log('ساخت دیتابیس D1: '+dbName);
-   const d=await cf(`/accounts/${account.id}/d1/database`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:dbName})});
-   dbId=d.uuid; if(!dbId)throw new Error('Cloudflare شناسه دیتابیس را برنگرداند.');
-   localStorage.setItem(META_KEY,JSON.stringify({accountId:account.id,workerName:name,databaseId:dbId,databaseName:dbName}));
-   log('دیتابیس ساخته شد: '+dbId,'ok');
+ if(updating){
+  dbId=saved.databaseId;dbName=saved.databaseName;
+  if(!dbId)throw new Error(tr("savedMissing"));
+  log(tr("reuseDb"));
+ }else{
+  dbName=("zerynx-"+name).slice(0,48);
+  log(tr("creatingDb")+dbName);
+  const d=await cf("/accounts/"+account.id+"/d1/database",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:dbName})},{timeout:90000});
+  dbId=d.uuid;
+  if(!dbId)throw new Error("Cloudflare did not return a D1 database ID.");
+  localStorage.setItem(META_KEY,JSON.stringify({accountId:account.id,workerName:name,databaseId:dbId,databaseName:dbName}));
+  log(tr("dbReady")+dbId,"ok");
  }
  const files=await loadSource();
  const manifest={},byHash={};
- for(const f of files){const d=await digest(f);f.hash=d.hash;f.encoded=d.encoded;manifest['/'+f.path.replace(/^worker\/public\//,'')]= {hash:d.hash,size:f.bytes.byteLength};byHash[d.hash]=f}
- log('ثبت فهرست فایل‌های Static Assets...');
- const session=await cf(`/accounts/${account.id}/workers/scripts/${name}/assets-upload-session`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({manifest:Object.fromEntries(files.filter(f=>f.path.startsWith('worker/public/')).map(f=>{const p='/'+f.path.replace(/^worker\/public\//,'');return [p,manifest[p]]}))})});
+ for(const f of files){const d=await digest(f);f.hash=d.hash;f.encoded=d.encoded;byHash[d.hash]=f;if(f.path.startsWith("worker/public/"))manifest["/"+f.path.replace(/^worker\/public\//,"")]={hash:d.hash,size:f.bytes.byteLength}}
+ log(tr("manifest"));
+ const session=await cf("/accounts/"+account.id+"/workers/scripts/"+name+"/assets-upload-session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({manifest})},{timeout:90000});
  let completion=session.jwt;
- for(const bucket of (session.buckets||[])){
-   const form=new FormData();
-   for(const hash of bucket){const f=byHash[hash];if(!f)throw new Error('Asset hash ناشناخته: '+hash);form.append(hash,f.encoded)}
-   const rr=await fetch(API+`/accounts/${account.id}/workers/assets/upload?base64=true`,{method:'POST',headers:{Authorization:'Bearer '+session.jwt},body:form});
-   const jj=await rr.json();if(!rr.ok||!jj.success)throw new Error('آپلود Assets ناموفق بود: '+JSON.stringify(jj.errors||jj));
-   if(jj.result?.jwt)completion=jj.result.jwt;
-   log('بسته فایل‌های پنل آپلود شد.','ok');
+ for(const bucket of(session.buckets||[])){
+  const form=new FormData();
+  for(const hash of bucket){const f=byHash[hash];if(!f)throw new Error("Unknown asset hash: "+hash);form.append(hash,f.encoded)}
+  const rr=await request(API+"/accounts/"+account.id+"/workers/assets/upload?base64=true",{method:"POST",headers:{Authorization:"Bearer "+session.jwt},body:form},90000,0);
+  let jj;try{jj=await rr.json()}catch(e){throw new Error("Asset upload returned invalid JSON.")}
+  if(!rr.ok||!jj.success)throw new Error("Asset upload failed: "+JSON.stringify(jj.errors||jj));
+  if(jj.result&&jj.result.jwt)completion=jj.result.jwt;
+  log(tr("assetsReady"),"ok");
  }
- const workerFile=files.find(f=>f.path==='worker/src/index.js');
- const metadata={main_module:'worker.js',compatibility_date:'2025-11-01',bindings:[
-   {type:'d1',name:'DB',database_id:dbId},
-   {type:'assets',name:'ASSETS'}
- ],assets:{jwt:completion,config:{html_handling:'auto-trailing-slash'}}};
+ const workerFile=files.find(f=>f.path==="worker/src/index.js");
+ const metadata={main_module:"worker.js",compatibility_date:"2025-11-01",bindings:[{type:"d1",name:"DB",database_id:dbId},{type:"assets",name:"ASSETS"}],assets:{jwt:completion,config:{html_handling:"auto-trailing-slash"}}};
  const form=new FormData();
- form.append('metadata',new Blob([JSON.stringify(metadata)],{type:'application/json'}));
- form.append('worker.js',new Blob([workerFile.bytes],{type:'application/javascript+module'}),'worker.js');
- log('انتشار Worker و اتصال Bindingهای DB و ASSETS...');
- const put=await fetch(API+`/accounts/${account.id}/workers/scripts/${name}`,{method:'PUT',headers:{Authorization:'Bearer '+activeToken},body:form});
- const pj=await put.json();if(!put.ok||!pj.success)throw new Error('Deploy ناموفق بود: '+JSON.stringify(pj.errors||pj));
- log('Worker منتشر شد.','ok');
- try{await cf(`/accounts/${account.id}/workers/scripts/${name}/subdomain`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:true})})}catch(e){log('فعال‌سازی workers.dev خودکار انجام نشد: '+e.message,'bad')}
+ form.append("metadata",new Blob([JSON.stringify(metadata)],{type:"application/json"}));
+ form.append("worker.js",new Blob([workerFile.bytes],{type:"application/javascript+module"}),"worker.js");
+ log(tr("deploying"));
+ const put=await request(API+"/accounts/"+account.id+"/workers/scripts/"+name,{method:"PUT",headers:{Authorization:"Bearer "+activeToken},body:form},120000,0);
+ let pj;try{pj=await put.json()}catch(e){throw new Error("Deploy returned invalid JSON.")}
+ if(!put.ok||!pj.success)throw new Error("Deploy failed: "+JSON.stringify(pj.errors||pj));
+ log(tr("deployed"),"ok");
+ try{await cf("/accounts/"+account.id+"/workers/scripts/"+name+"/subdomain",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:true})},{timeout:45000})}catch(e){log(e.message,"bad")}
  let sub;
- try{sub=(await cf(`/accounts/${account.id}/workers/subdomain`)).subdomain}catch(e){
-   const proposed='zerynx-'+Math.random().toString(36).slice(2,8);
-   const v=prompt('برای ساخت آدرس workers.dev، یک subdomain حساب لازم است. نام پیشنهادی را تأیید یا ویرایش کنید:',proposed);
-   if(!v)throw new Error('ساخت subdomain لغو شد. از داشبورد Cloudflare آن را فعال کنید و دوباره به‌روزرسانی را بزنید.');
-   sub=(await cf(`/accounts/${account.id}/workers/subdomain`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({subdomain:v.toLowerCase()})})).subdomain;
- }
- const url=`https://${name}.${sub}.workers.dev`;
- log('بررسی سلامت Worker و D1...');
+ try{sub=(await cf("/accounts/"+account.id+"/workers/subdomain")).subdomain}catch(e){throw new Error(tr("subdomainMissing")+" "+e.message)}
+ if(!sub)throw new Error(tr("subdomainMissing"));
+ const url="https://"+name+"."+sub+".workers.dev";
+ log(tr("health"));
  let health=null,lastErr=null;
- for(let i=0;i<12;i++){try{const r=await fetch(url+'/api/health',{cache:'no-store'});health=await r.json();if(health.ok&&health.database==='connected')break;lastErr=new Error(JSON.stringify(health))}catch(e){lastErr=e}await new Promise(r=>setTimeout(r,2500))}
- if(!health?.ok||health.database!=='connected')throw new Error('Worker منتشر شد اما Health Check موفق نبود. آخرین خطا: '+(lastErr?.message||JSON.stringify(health)));
- log('اتصال واقعی D1 تأیید شد. نسخه '+health.version,'ok');
- $('url').href=url;$('url').textContent=url;$('result').style.display='block';
+ for(let i=0;i<14;i++){
+  try{const r=await request(url+"/api/health",{cache:"no-store"},20000,0);health=await r.json();if(health.ok&&health.database==="connected")break;lastErr=new Error(JSON.stringify(health))}
+  catch(e){lastErr=e}
+  await new Promise(r=>setTimeout(r,2500));
+ }
+ if(!health||!health.ok||health.database!=="connected")throw new Error(tr("healthFailed")+(lastErr?lastErr.message:JSON.stringify(health)));
+ log(tr("healthOk")+health.version,"ok");
+ $("url").href=url;$("url").textContent=url;$("result").style.display="block";
  localStorage.setItem(META_KEY,JSON.stringify({accountId:account.id,workerName:name,databaseId:dbId,databaseName:dbName,subdomain:sub}));
- log(updating?'به‌روزرسانی پنل کامل شد. دیتابیس قبلی حفظ شد.':'نصب ZERYNX VPN کامل شد.','ok');
+ log(updating?tr("doneUpdate"):tr("doneInstall"),"ok");
 }
-$('install').addEventListener('click',async()=>{const t=$('token').value.trim();if(!t)return alert('API Token را وارد کنید.');$('log').textContent='';$('result').style.display='none';setBusy(true);try{await deploy(t,false)}catch(e){log(e.message,'bad');alert(e.message)}finally{activeToken='';$('token').value='';setBusy(false)}});
-$('update').addEventListener('click',async()=>{const t=$('token').value.trim();if(!t)return alert('برای به‌روزرسانی API Token را وارد کنید.');$('log').textContent='';$('result').style.display='none';setBusy(true);try{await deploy(t,true)}catch(e){log(e.message,'bad');alert(e.message)}finally{activeToken='';$('token').value='';setBusy(false)}});
-$('copy').onclick=()=>navigator.clipboard.writeText($('url').href);
-})();
-</script></body></html>
+async function run(isUpdate){
+ const token=$("token").value.trim();
+ if(!token){alert(tr("tokenRequired"));return}
+ $("log").textContent="";$("result").style.display="none";setBusy(true);
+ try{await deploy(token,isUpdate)}
+ catch(e){log(e.message,"bad");alert(e.message)}
+ finally{activeToken="";$("token").value="";setBusy(false)}
+}
+$("install").addEventListener("click",()=>run(false));
+$("update").addEventListener("click",()=>run(true));
+$("copy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText($("url").href);log(tr("copyDone"),"ok")}catch(e){$("url").focus();log($("url").href)}});
+setLanguage("fa");
+})(); 
+</script>
+</body>
+</html>
