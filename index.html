@@ -221,6 +221,22 @@ function assetMime(path){
  const e=path.split(".").pop().toLowerCase();
  return ({html:"text/html; charset=utf-8",css:"text/css; charset=utf-8",js:"application/javascript",mjs:"application/javascript",json:"application/json",svg:"image/svg+xml",png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",webp:"image/webp",gif:"image/gif",ico:"image/x-icon",txt:"text/plain; charset=utf-8",woff:"font/woff",woff2:"font/woff2"})[e]||"application/octet-stream";
 }
+function buildAssetMultipart(bucket,assetMap){
+ const boundary="----ZERYNXAssets"+crypto.randomUUID().replace(/-/g,"");
+ const encoder=new TextEncoder(),chunks=[];
+ for(const hash of bucket){
+  const asset=assetMap[hash];
+  if(!asset)throw new Error("Unknown asset hash: "+hash);
+  chunks.push(encoder.encode("--"+boundary+"\r\nContent-Disposition: form-data; name=\""+hash+"\"\r\nContent-Type: "+assetMime(asset.path)+"\r\n\r\n"));
+  chunks.push(encoder.encode(asset.encoded));
+  chunks.push(encoder.encode("\r\n"));
+ }
+ chunks.push(encoder.encode("--"+boundary+"--\r\n"));
+ const size=chunks.reduce((n,part)=>n+part.byteLength,0),body=new Uint8Array(size);
+ let offset=0;
+ for(const part of chunks){body.set(part,offset);offset+=part.byteLength}
+ return {body,contentType:"multipart/form-data; boundary="+boundary};
+}
 async function applyD1Migrations(accountId,dbId,migrations){
  const endpoint="/accounts/"+accountId+"/d1/database/"+dbId+"/query";
  await cf(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sql:"CREATE TABLE IF NOT EXISTS __zerynx_installer_migrations (name TEXT PRIMARY KEY, checksum TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"})},{timeout:90000});
@@ -302,7 +318,7 @@ async function deploy(token,updating){
   const bytes=new Uint8Array(f.bytes);let binary="";
   for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
   const encoded=btoa(binary);
-  const hashBytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(encoded+ext));
+  const hashBytes=await crypto.subtle.digest("SHA-256",bytes);
   const hash=Array.from(new Uint8Array(hashBytes)).map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,32);
   f.encoded=encoded;
   const relative="/"+f.path.slice(source.cfg.assetsPath.replace(/\/$/,"").length).replace(/^\/+/,"");
@@ -315,15 +331,11 @@ async function deploy(token,updating){
   const buckets=session.buckets||[];
   completion=buckets.length?null:session.jwt;
   for(const bucket of buckets){
-   const formAssets=new FormData();
-   for(const hash of bucket){
-    const asset=assetMap[hash];if(!asset)throw new Error("Unknown asset hash: "+hash);
-    const filename=asset.path.split("/").pop()||hash;
-    formAssets.append(hash,new Blob([asset.encoded],{type:assetMime(asset.path)}),filename);
-   }
-   const upload=await request(apiUrl("/accounts/"+account.id+"/workers/assets/upload?base64=true"),{method:"POST",headers:{Authorization:"Bearer "+session.jwt},body:formAssets},120000,0);
-   const uploadJson=await upload.json();
-   if(!upload.ok||!uploadJson.success)throw new Error("Assets upload failed: "+JSON.stringify(uploadJson.errors||uploadJson));
+   const multipart=buildAssetMultipart(bucket,assetMap);
+   log("Uploading asset batch: "+bucket.length+" file(s), "+multipart.body.byteLength+" bytes...");
+   const upload=await request(apiUrl("/accounts/"+account.id+"/workers/assets/upload?base64=true"),{method:"POST",headers:{Authorization:"Bearer "+session.jwt,"Content-Type":multipart.contentType},body:multipart.body},120000,0);
+   let uploadJson;try{uploadJson=await upload.json()}catch(e){throw new Error("Assets upload returned a non-JSON response (HTTP "+upload.status+").")}
+   if(!upload.ok||!uploadJson.success)throw new Error("Assets upload failed (HTTP "+upload.status+"): "+JSON.stringify(uploadJson.errors||uploadJson));
    if(uploadJson.result&&uploadJson.result.jwt)completion=uploadJson.result.jwt;
   }
   if(!completion)throw new Error("Cloudflare did not return the static-assets completion token.");
