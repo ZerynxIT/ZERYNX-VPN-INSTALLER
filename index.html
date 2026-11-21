@@ -219,16 +219,6 @@ async function applyD1Migrations(accountId,dbId,migrations){
  }
  if(!migrations.length)log("No SQL migrations found. Existing D1 schema and data remain unchanged.","ok");
 }
-function b64(buf){let s="";const a=new Uint8Array(buf);for(let i=0;i<a.length;i+=0x8000)s+=String.fromCharCode.apply(null,a.subarray(i,i+0x8000));return btoa(s)}
-async function digest(file){const ext=file.path.split(".").pop().toLowerCase();const encoded=b64(file.bytes);const input=new TextEncoder().encode(encoded+ext);const hash=await crypto.subtle.digest("SHA-256",input);return{hash:Array.from(new Uint8Array(hash)).map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,32),encoded}}
-function mime(p){return p.endsWith(".html")?"text/html":p.endsWith(".svg")?"image/svg+xml":p.endsWith(".jpg")?"image/jpeg":"application/javascript+module"}
-async function loadSource(){
- log(tr("fetchSource"));
- const paths=["worker/src/index.js","worker/public/index.html","worker/public/assets/logo.svg","worker/public/assets/banner.jpg"];
- const files=[];
- for(const path of paths){const r=await getJson(RAW+path);files.push({path,bytes:await r.arrayBuffer(),type:r.headers.get("content-type")||mime(path)});log(tr("sourceReady")+path,"ok")}
- return files;
-}
 async function deploy(token,updating){
  activeToken=token;
  const name=$("worker").value.trim().toLowerCase();
