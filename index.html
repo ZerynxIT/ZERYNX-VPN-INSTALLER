@@ -256,6 +256,21 @@ async function applyD1Migrations(accountId,dbId,migrations){
  }
  if(!migrations.length)log("No SQL migrations found. Existing D1 schema and data remain unchanged.","ok");
 }
+async function syncWorkersBuildSettings(accountId,workerName,source){
+ try{
+  log("Checking Cloudflare Workers Builds configuration...");
+  const scripts=await cf("/accounts/"+accountId+"/workers/scripts?per_page=100");
+  const script=(scripts||[]).find(x=>x.id===workerName);
+  if(!script||!script.tag){log("Worker tag unavailable; Build settings were not changed.","bad");return}
+  const settings=await cf("/accounts/"+accountId+"/builds/workers/"+script.tag);
+  if(!settings||!settings.git_repository||String(settings.git_repository.repo_id)!==String(source.repoId)){log("This Worker is not connected to the ZERYNX-VPN GitHub repository. Build settings were left unchanged.","info");return}
+  const production={root_directory:source.buildRoot,deploy_command:source.deployCommand};
+  const patch={production_settings:production};
+  if(settings.previews_base_config)patch.previews_base_config={root_directory:source.buildRoot};
+  await cf("/accounts/"+accountId+"/builds/workers/"+script.tag,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(patch)},{timeout:90000});
+  log("Cloudflare Build settings updated: root="+source.buildRoot+"; deploy="+source.deployCommand,"ok");
+ }catch(e){log("Build settings were not changed: "+e.message+". The API token needs Workers Builds Configuration Edit and must be user-scoped.","bad")}
+}
 async function deploy(token,updating){
  activeToken=token;
  const name=$("worker").value.trim().toLowerCase();
@@ -327,6 +342,7 @@ async function deploy(token,updating){
  const result=await put.json();
  if(!put.ok||!result.success)throw new Error("Deploy failed: "+JSON.stringify(result.errors||result));
  log(tr("deployed"),"ok");
+ await syncWorkersBuildSettings(account.id,name,source);
  try{await cf("/accounts/"+account.id+"/workers/scripts/"+name+"/subdomain",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:true})},{timeout:45000})}catch(e){log(e.message,"bad")}
  let sub;
  try{sub=(await cf("/accounts/"+account.id+"/workers/subdomain")).subdomain}catch(e){throw new Error(tr("subdomainMissing")+" "+e.message)}
