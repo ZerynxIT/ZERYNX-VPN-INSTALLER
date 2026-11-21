@@ -233,7 +233,8 @@ async function getRepoSnapshot(){
   const pkg=JSON.parse(await (await getJson("https://raw.githubusercontent.com/ZerynxIT/ZERYNX-VPN/"+commit+"/"+packagePath)).text());
   const locks=["pnpm-lock.yaml","yarn.lock","bun.lock","bun.lockb","package-lock.json","npm-shrinkwrap.json"];
   const lock=locks.map(x=>(configDir?configDir+"/":"")+x).find(x=>entries.some(e=>e.path===x));
-  const manager=(pkg.packageManager||"").split("@")[0]||(lock&&lock.endsWith("pnpm-lock.yaml")?"pnpm")||(lock&&lock.endsWith("yarn.lock")?"yarn")||(lock&&(lock.endsWith("bun.lock")||lock.endsWith("bun.lockb"))?"bun"):"npm");
+  let manager=(pkg.packageManager||"").split("@")[0]||"npm";
+  if(!pkg.packageManager&&lock){if(lock.endsWith("pnpm-lock.yaml"))manager="pnpm";else if(lock.endsWith("yarn.lock"))manager="yarn";else if(lock.endsWith("bun.lock")||lock.endsWith("bun.lockb"))manager="bun";}
   if(pkg.scripts&&typeof pkg.scripts.deploy==="string"&&pkg.scripts.deploy.trim())deployCommand=manager+" run deploy";
  }
  return {commit,repoId:repoMeta.id,buildRoot:rootDirectory,deployCommand,cfg,modules:pick(modules),assets:pick(assets),migrations:pick(migrations)};
