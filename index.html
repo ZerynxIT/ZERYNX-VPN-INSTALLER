@@ -89,13 +89,16 @@ button,input{font:inherit}a{color:inherit}.shell{width:min(1080px,100%);margin:a
  <div class="token-note"><strong data-i18n="privacyTitle">حریم خصوصی و کنترل دسترسی</strong><div class="help" data-i18n="privacyText">توکن را فقط در صفحه رسمی GitHub Pages وارد کن. توکن برای ارسال درخواست‌ها از مرورگر به Relay مدیریت‌شده ZERYNX فرستاده می‌شود؛ در GitHub یا LocalStorage ذخیره نمی‌شود. فقط در صورتی ادامه بده که به کد Relay اعتماد داری. پس از نصب می‌توانی توکن را لغو کنی؛ برای Update بعدی توکن تازه بساز.</div></div>
 </aside>
 </div>
-<div class="log-wrap"><div class="log-title" data-i18n="activity">گزارش عملیات</div><div class="log" id="log" aria-live="polite">آماده. توکن API کلادفلر را وارد کنید و نصب را آغاز کنید.</div></div>
+<div class="log-wrap"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px"><div class="log-title" data-i18n="activity">گزارش عملیات و عیب‌یابی دقیق</div><button class="btn secondary" id="copyDiag" type="button" style="min-height:34px;padding:6px 11px;font-size:10px">کپی گزارش عیب‌یابی</button></div><div class="log" id="log" aria-live="polite">آماده. توکن API کلادفلر را وارد کنید و نصب را آغاز کنید.</div></div>
 <footer class="footer">ZERYNX-VPN-INSTALLER · SOURCE: GITHUB.COM/ZERYNXIT/ZERYNX-VPN · © ZERYNX</footer>
 </main>
 <script>
 (function(){
 "use strict";
 const $=id=>document.getElementById(id);
+let currentStage="آماده‌سازی";
+let diagnosticEvents=[];
+let lastDiagnosticReport="";
 const API_DIRECT="https://zerynx-installer-core.novab6ip7lq4.workers.dev/client/v4";
 function apiUrl(path){return API_DIRECT+path;}
 const RAW="https://raw.githubusercontent.com/ZerynxIT/ZERYNX-VPN/main/";
@@ -116,22 +119,41 @@ function safeName(s){return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(s)}
 function timedFetch(url,options={},timeout=60000){
  return new Promise((resolve,reject)=>{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeout);fetch(url,{...options,signal:controller.signal}).then(resolve,reject).finally(()=>clearTimeout(timer)).catch(err=>{clearTimeout(timer);reject(err)})});
 }
+function makeDiagnosticReport(error){
+ const report={time:new Date().toISOString(),stage:currentStage,error:{name:error&&error.name||"Error",message:error&&error.message||String(error)},requests:diagnosticEvents.slice(-40)};
+ lastDiagnosticReport=JSON.stringify(report,null,2);
+ return lastDiagnosticReport;
+}
 async function request(url,options={},timeout=60000,retries=0){
- let last;
+ let last,started=Date.now(),method=(options.method||"GET").toUpperCase(),safeUrl;
+ try{const u=new URL(url);safeUrl=u.origin+u.pathname+(u.search?"?"+u.searchParams.toString().replace(/(jwt|token|authorization)=[^&]*/ig,"$1=[REDACTED]"):"")}catch(e){safeUrl="[invalid URL]"}
+ const event={stage:currentStage,method,url:safeUrl,timeoutMs:timeout,attempts:retries+1};
  for(let attempt=0;attempt<=retries;attempt++){
-  try{return await timedFetch(url,options,timeout)}
-  catch(e){last=e;if(attempt<retries)await new Promise(r=>setTimeout(r,900*(attempt+1)))}
+  try{
+   const response=await timedFetch(url,options,timeout);
+   event.httpStatus=response.status;
+   event.responseType=response.headers.get("content-type")||"";
+   event.cfRay=response.headers.get("cf-ray")||"";
+   event.server=response.headers.get("server")||"";
+   event.durationMs=Date.now()-started;
+   diagnosticEvents.push(event);
+   if(diagnosticEvents.length>80)diagnosticEvents.shift();
+   return response;
+  }catch(e){last=e;event.lastErrorName=e&&e.name||"Error";event.lastErrorMessage=e&&e.message||String(e);if(attempt<retries)await new Promise(r=>setTimeout(r,900*(attempt+1)))}
  }
- if(last&&last.name==="AbortError")throw new Error(tr("timeout"));
- let host="unknown host";try{host=new URL(url).host}catch(e){}
-  let detail="";try{detail=(options.method||"GET").toUpperCase()+" "+new URL(url).pathname}catch(e){}
-  throw new Error(tr("network")+" ["+host+"]"+(detail?" ["+detail+"]":"")+" ("+(last&&last.message?last.message:"network error")+")");
+ event.durationMs=Date.now()-started;
+ event.failure=last&&last.name==="AbortError"?"TIMEOUT":"FETCH_REJECTED";
+ diagnosticEvents.push(event);
+ if(diagnosticEvents.length>80)diagnosticEvents.shift();
+ const detail=method+" "+safeUrl+" | stage="+currentStage+" | "+event.failure+" | "+event.lastErrorName+": "+event.lastErrorMessage+" | attempts="+event.attempts+" | durationMs="+event.durationMs;
+ throw new Error(tr("network")+" | "+detail);
 }
 async function cf(path,opts={},config={}){
  const isGet=!opts.method||opts.method.toUpperCase()==="GET";
  const res=await request(apiUrl(path),{...opts,headers:{Authorization:"Bearer "+activeToken,...(opts.headers||{})}},config.timeout||60000,isGet?2:0);
- let j;try{j=await res.json()}catch(e){throw new Error("Cloudflare returned an unreadable response ("+res.status+").")}
- if(!res.ok||!j.success)throw new Error(tr("apiError")+(j.errors||[]).map(x=>x.message).join(" | ")||"HTTP "+res.status);
+ let raw="";try{raw=await res.text()}catch(e){throw new Error("Cloudflare response body read failed | HTTP "+res.status+" | "+e.name+": "+e.message)}
+ let j;try{j=JSON.parse(raw)}catch(e){throw new Error("Cloudflare returned non-JSON | HTTP "+res.status+" | content-type="+(res.headers.get("content-type")||"unknown")+" | body="+raw.slice(0,1600))}
+ if(!res.ok||!j.success)throw new Error("Cloudflare API rejected request | HTTP "+res.status+" | "+JSON.stringify({errors:j.errors||[],messages:j.messages||[],result:j.result||null}).slice(0,4000));
  return j.result;
 }
 async function getJson(url,headers={}){const r=await request(url,{cache:"no-store",headers},60000,2);if(!r.ok)throw new Error("Download failed ("+r.status+"): "+url);return r}
@@ -267,6 +289,7 @@ async function syncWorkersBuildSettings(accountId,workerName,source){
 }
 async function deploy(token,updating){
  activeToken=token;
+ currentStage="بررسی توکن Cloudflare";
  const name="zerynx-vpn";
  if(!safeName(name))throw new Error(tr("workerInvalid"));
  log(tr("verify"));
@@ -304,9 +327,11 @@ async function deploy(token,updating){
   localStorage.setItem(META_KEY,JSON.stringify({accountId:account.id,workerName:name,databaseId:dbId,databaseName:dbName}));
   log(tr("dbReady")+dbId,"ok");
  }
+ currentStage="دریافت و بررسی سورس GitHub";
  const source=await getRepoSnapshot();
  log("Latest source commit: "+source.commit.slice(0,12),"ok");
  log("Modules: "+source.modules.length+" | Assets: "+source.assets.length+" | SQL migrations: "+source.migrations.length,"ok");
+ currentStage="اعمال تغییرات دیتابیس D1";
  await applyD1Migrations(account.id,dbId,source.migrations);
  const manifest={},assetMap={};
  for(const f of source.assets){
@@ -322,6 +347,7 @@ async function deploy(token,updating){
  }
  let completion=null;
  if(source.cfg.assetsDir){
+  currentStage="ساخت نشست آپلود Assets";
   log(tr("manifest"));
   const session=await cf("/accounts/"+account.id+"/workers/scripts/"+name+"/assets-upload-session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({manifest})},{timeout:90000});
   const buckets=session.buckets||[];
@@ -332,6 +358,7 @@ async function deploy(token,updating){
   for(const bucket of buckets){
    const form=buildAssetFormData(bucket,assetMap);
    const totalBytes=bucket.reduce((sum,hash)=>sum+(assetMap[hash]?.bytes?.byteLength||0),0);
+   currentStage="آپلود Assets به Cloudflare | batch "+(buckets.indexOf(bucket)+1)+"/"+buckets.length+" | files="+bucket.length+" | bytes="+totalBytes;
    log("Uploading asset batch: "+bucket.length+" file(s), "+totalBytes+" source bytes...");
    const upload=await request(apiUrl("/accounts/"+account.id+"/workers/assets/upload?base64=true"),{method:"POST",headers:{Authorization:"Bearer "+session.jwt},body:form},180000,0);
    let uploadJson;try{uploadJson=await upload.json()}catch(e){throw new Error("Assets upload returned a non-JSON response (HTTP "+upload.status+").")}
@@ -347,6 +374,7 @@ async function deploy(token,updating){
  form.append("metadata",new Blob([JSON.stringify(metadata)],{type:"application/json"}));
  for(const module of source.modules)form.append(module.path,new Blob([module.bytes],{type:workerModuleMime(module.path)}),module.path);
  log(tr("deploying"));
+ currentStage="انتشار Worker";
  const put=await request(apiUrl("/accounts/"+account.id+"/workers/scripts/"+name),{method:"PUT",headers:{Authorization:"Bearer "+activeToken},body:form},180000,0);
  const result=await put.json();
  if(!put.ok||!result.success)throw new Error("Deploy failed: "+JSON.stringify(result.errors||result));
@@ -357,6 +385,7 @@ async function deploy(token,updating){
  try{sub=(await cf("/accounts/"+account.id+"/workers/subdomain")).subdomain}catch(e){throw new Error(tr("subdomainMissing")+" "+e.message)}
  if(!sub)throw new Error(tr("subdomainMissing"));
  const url="https://"+name+"."+sub+".workers.dev";
+ currentStage="بررسی Health و اتصال D1";
  log(tr("health"));
  let health=null,lastErr=null;
  for(let i=0;i<14;i++){try{const response=await request(url+"/api/health",{cache:"no-store"},20000,0);health=await response.json();if(health.ok&&health.database==="connected")break;lastErr=new Error(JSON.stringify(health))}catch(e){lastErr=e}await new Promise(r=>setTimeout(r,2500))}
@@ -368,15 +397,27 @@ async function deploy(token,updating){
 }
 async function run(isUpdate){
  const token=$("token").value.trim();
+ diagnosticEvents=[];lastDiagnosticReport="";currentStage=isUpdate?"شروع به‌روزرسانی نصب قبلی":"شروع نصب";
  if(!token){alert(tr("tokenRequired"));return}
  $("log").textContent="";$("result").style.display="none";setBusy(true);log("ZERYNX Relay: "+API_DIRECT,"info");
  try{await deploy(token,isUpdate)}
- catch(e){const message=localizeRuntimeText(e.message);log(message,"bad");alert(message)}
+ catch(e){
+  const message=localizeRuntimeText(e.message);
+  log(message,"bad");
+  const report=makeDiagnosticReport(e);
+  log("گزارش فنی عیب‌یابی (بدون توکن و اطلاعات محرمانه):\n"+report,"bad");
+  alert(message+"\n\nگزارش کامل عیب‌یابی در بخش گزارش عملیات ثبت شد. برای ارسال آن از دکمه «کپی گزارش عیب‌یابی» استفاده کن.");
+ }
  finally{activeToken="";$("token").value="";setBusy(false)}
 }
 $("install").addEventListener("click",()=>run(false));
 $("update").addEventListener("click",()=>run(true));
 $("copy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText($("url").href);log(tr("copyDone"),"ok")}catch(e){$("url").focus();log($("url").href)}});
+$("copyDiag").addEventListener("click",async()=>{
+ const report=lastDiagnosticReport||JSON.stringify({time:new Date().toISOString(),stage:currentStage,requests:diagnosticEvents},null,2);
+ try{await navigator.clipboard.writeText(report);log("گزارش عیب‌یابی کپی شد.","ok")}
+ catch(e){log("کپی خودکار ممکن نشد؛ متن گزارش را از بخش گزارش عملیات انتخاب و کپی کن.","bad")}
+});
 setLanguage("fa");
 })(); 
 </script>
