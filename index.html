@@ -347,7 +347,8 @@ async function deploy(token,updating){
   const bytes=new Uint8Array(f.bytes);let binary="";
   for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
   const encoded=btoa(binary);
-  const hashBytes=await crypto.subtle.digest("SHA-256",bytes);
+  const ext=f.path.split(".").pop().toLowerCase();
+  const hashBytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(encoded+ext));
   const hash=Array.from(new Uint8Array(hashBytes)).map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,32);
   f.encoded=encoded;
   const relative="/"+f.path.slice(source.cfg.assetsPath.replace(/\/$/,"").length).replace(/^\/+/,"");
