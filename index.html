@@ -251,13 +251,13 @@ function buildAssetMultipart(bucket,assetMap){
   if(!asset)throw new Error("Unknown asset hash: "+hash);
   // Cloudflare expects a normal multipart field (no filename), containing
   // base64 text, with the original asset MIME type on that part.
-  parts.push("--"+boundary+"\\r\\n");
-  parts.push('Content-Disposition: form-data; name="'+hash+'"\\r\\n');
-  parts.push("Content-Type: "+assetMime(asset.path)+"\\r\\n\\r\\n");
+  parts.push("--"+boundary+"\r\n");
+  parts.push('Content-Disposition: form-data; name="'+hash+'"\r\n');
+  parts.push("Content-Type: "+assetMime(asset.path)+"\r\n\r\n");
   parts.push(asset.encoded);
-  parts.push("\\r\\n");
+  parts.push("\r\n");
  }
- parts.push("--"+boundary+"--\\r\\n");
+ parts.push("--"+boundary+"--\r\n");
  const body=new Blob(parts,{type:"multipart/form-data; boundary="+boundary});
  return body;
 }
