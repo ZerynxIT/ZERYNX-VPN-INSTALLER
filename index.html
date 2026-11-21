@@ -203,13 +203,20 @@ async function getRepoSnapshot(){
  const tree=await (await getJson("https://api.github.com/repos/ZerynxIT/ZERYNX-VPN/git/trees/"+treeSha+"?recursive=1",{Accept:"application/vnd.github+json"})).json();
  if(tree.truncated)throw new Error("GitHub returned a truncated repository tree; deployment stopped to avoid missing files.");
  const entries=(tree.tree||[]).filter(x=>x.type==="blob");
- const wr=entries.find(x=>x.path==="wrangler.toml");
- if(!wr)throw new Error("wrangler.toml not found in source repository.");
- const cfg=parseRepoToml(await (await getJson("https://raw.githubusercontent.com/ZerynxIT/ZERYNX-VPN/"+commit+"/wrangler.toml")).text());
- const sourceDir=cfg.main.split("/").slice(0,-1).join("/")+"/";
- const modules=entries.filter(x=>(x.path===cfg.main||x.path.startsWith(sourceDir))&&/\.(js|mjs|json|wasm|txt|html|bin)$/i.test(x.path));
- if(!modules.some(x=>x.path===cfg.main))throw new Error("Configured Worker entry point is missing: "+cfg.main);
- const assets=cfg.assetsDir?entries.filter(x=>x.path.startsWith(cfg.assetsDir.replace(/\/$/,"")+"/")):[];
+ const configs=entries.filter(x=>/(^|\/)wrangler\.toml$/i.test(x.path));
+ if(!configs.length)throw new Error("No wrangler.toml found in source repository.");
+ if(configs.length>1)throw new Error("Multiple wrangler.toml files found; automatic selection is ambiguous.");
+ const wr=configs[0];
+ const configDir=wr.path.includes("/")?wr.path.slice(0,wr.path.lastIndexOf("/")):"";
+ const resolvePath=(base,value)=>{const parts=((base?base+"/":"")+(value||"").replace(/^\/+/, "")).split("/");const out=[];for(const p of parts){if(!p||p===".")continue;if(p===".."){if(!out.length)throw new Error("Invalid repository path: "+value);out.pop()}else out.push(p)}return out.join("/")};
+ const cfg=parseRepoToml(await (await getJson("https://raw.githubusercontent.com/ZerynxIT/ZERYNX-VPN/"+commit+"/"+wr.path)).text());
+ cfg.mainPath=resolvePath(configDir,cfg.main);
+ cfg.assetsPath=cfg.assetsDir?resolvePath(configDir,cfg.assetsDir):"";
+ const rootDirectory=configDir||"/";
+ const sourceDir=cfg.mainPath.slice(0,cfg.mainPath.lastIndexOf("/")+1);
+ const modules=entries.filter(x=>(x.path===cfg.mainPath||x.path.startsWith(sourceDir))&&/\.(js|mjs|json|wasm|txt|html|bin)$/i.test(x.path));
+ if(!modules.some(x=>x.path===cfg.mainPath))throw new Error("Configured Worker entry point is missing: "+cfg.mainPath);
+ const assets=cfg.assetsPath?entries.filter(x=>x.path.startsWith(cfg.assetsPath.replace(/\/$/,"")+"/")):[];
  const migrations=entries.filter(x=>/^migrations\/[0-9A-Za-z_.-]+\.sql$/i.test(x.path)).sort((a,b)=>a.path.localeCompare(b.path));
  const wanted=new Map();[...modules,...assets,...migrations].forEach(x=>wanted.set(x.path,x));
  const files=[];
@@ -219,7 +226,17 @@ async function getRepoSnapshot(){
   log("Fetched "+item.path,"ok");
  }
  const pick=arr=>files.filter(f=>arr.some(x=>x.path===f.path));
- return {commit,cfg,modules:pick(modules),assets:pick(assets),migrations:pick(migrations)};
+ const repoMeta=await (await getJson("https://api.github.com/repos/ZerynxIT/ZERYNX-VPN",{Accept:"application/vnd.github+json"})).json();
+ let deployCommand="npx wrangler deploy";
+ const packagePath=(configDir?configDir+"/":"")+"package.json";
+ if(entries.some(x=>x.path===packagePath)){
+  const pkg=JSON.parse(await (await getJson("https://raw.githubusercontent.com/ZerynxIT/ZERYNX-VPN/"+commit+"/"+packagePath)).text());
+  const locks=["pnpm-lock.yaml","yarn.lock","bun.lock","bun.lockb","package-lock.json","npm-shrinkwrap.json"];
+  const lock=locks.map(x=>(configDir?configDir+"/":"")+x).find(x=>entries.some(e=>e.path===x));
+  const manager=(pkg.packageManager||"").split("@")[0]||(lock&&lock.endsWith("pnpm-lock.yaml")?"pnpm")||(lock&&lock.endsWith("yarn.lock")?"yarn")||(lock&&(lock.endsWith("bun.lock")||lock.endsWith("bun.lockb"))?"bun"):"npm");
+  if(pkg.scripts&&typeof pkg.scripts.deploy==="string"&&pkg.scripts.deploy.trim())deployCommand=manager+" run deploy";
+ }
+ return {commit,repoId:repoMeta.id,buildRoot:rootDirectory,deployCommand,cfg,modules:pick(modules),assets:pick(assets),migrations:pick(migrations)};
 }
 function workerModuleMime(path){const e=path.split(".").pop().toLowerCase();return e==="js"||e==="mjs"?"application/javascript+module":e==="json"?"application/json":e==="wasm"?"application/wasm":e==="html"?"text/html":e==="txt"?"text/plain":"application/octet-stream"}
 async function applyD1Migrations(accountId,dbId,migrations){
@@ -282,7 +299,7 @@ async function deploy(token,updating){
   const hashBytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(encoded+ext));
   const hash=Array.from(new Uint8Array(hashBytes)).map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,32);
   f.encoded=encoded;
-  const relative="/"+f.path.slice(source.cfg.assetsDir.replace(/\/$/,"").length).replace(/^\/+/,"");
+  const relative="/"+f.path.slice(source.cfg.assetsPath.replace(/\/$/,"").length).replace(/^\/+/,"");
   manifest[relative]={hash,size:f.bytes.byteLength};assetMap[hash]=f;
  }
  let completion=null;
@@ -300,7 +317,7 @@ async function deploy(token,updating){
   }
   log(tr("assetsReady"),"ok");
  }
- const metadata={main_module:source.cfg.main,compatibility_date:source.cfg.date,bindings:[{type:"d1",name:source.cfg.d1Binding,database_id:dbId}]};
+ const metadata={main_module:source.cfg.mainPath,compatibility_date:source.cfg.date,bindings:[{type:"d1",name:source.cfg.d1Binding,database_id:dbId}]};
  const form=new FormData();
  if(source.cfg.assetsDir){metadata.bindings.push({type:"assets",name:source.cfg.assetsBinding});metadata.assets={jwt:completion,config:{html_handling:"auto-trailing-slash"}}}
  form.append("metadata",new Blob([JSON.stringify(metadata)],{type:"application/json"}));
