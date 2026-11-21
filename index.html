@@ -226,10 +226,10 @@ function buildAssetFormData(bucket,assetMap){
  for(const hash of bucket){
   const asset=assetMap[hash];
   if(!asset)throw new Error("Unknown asset hash: "+hash);
-  // Send each hash as a multipart FILE part with an explicit filename.
-  // This matches Cloudflare's multipart file upload parser and avoids
-  // hand-built multipart framing/boundary errors.
-  form.append(hash,new Blob([asset.encoded],{type:assetMime(asset.path)}),hash);
+  // Cloudflare expects each multipart field value to be the base64 string.
+  // Do not append a Blob/File: that adds a filename and changes the part
+  // from a plain string field into a file upload.
+  form.append(hash,asset.encoded);
  }
  return form;
 }
@@ -327,8 +327,8 @@ async function deploy(token,updating){
   const buckets=session.buckets||[];
   completion=buckets.length?null:session.jwt;
   // Cloudflare returns upload buckets specifically to define request batches.
-  // Use native FormData so the browser creates a valid multipart boundary and
-  // each asset is encoded as a file part (filename = content hash).
+  // Use native FormData with plain string fields: field name = content hash,
+  // field value = base64-encoded asset content.
   for(const bucket of buckets){
    const form=buildAssetFormData(bucket,assetMap);
    const totalBytes=bucket.reduce((sum,hash)=>sum+(assetMap[hash]?.bytes?.byteLength||0),0);
