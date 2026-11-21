@@ -356,7 +356,7 @@ async function deploy(token,updating){
 async function run(isUpdate){
  const token=$("token").value.trim();
  if(!token){alert(tr("tokenRequired"));return}
- $("log").textContent="";$("result").style.display="none";setBusy(true);log("Direct connection: "+API_DIRECT,"info");
+ $("log").textContent="";$("result").style.display="none";setBusy(true);log("ZERYNX Relay: "+API_DIRECT,"info");
  try{await deploy(token,isUpdate)}
  catch(e){log(e.message,"bad");alert(e.message)}
  finally{activeToken="";$("token").value="";setBusy(false)}
