@@ -164,14 +164,34 @@ async function cf(path,opts={},config={}){
 }
 async function getJson(url,headers={}){const r=await request(url,{cache:"no-store",headers},60000,2);if(!r.ok)throw new Error("Download failed ("+r.status+"): "+url);return r}
 function parseRepoToml(t){
- const main=(t.match(/^\s*main\s*=\s*["']([^"']+)["']/m)||[])[1];
- const date=(t.match(/^\s*compatibility_date\s*=\s*["']([^"']+)["']/m)||[])[1]||"2025-11-01";
- const assetBlock=(t.match(/^\[assets\]([\s\S]*?)(?=^\[|\s*$)/m)||[])[1]||"";
- const assetsDir=(assetBlock.match(/^\s*directory\s*=\s*["']([^"']+)["']/m)||[])[1]||"";
- const assetsBinding=(assetBlock.match(/^\s*binding\s*=\s*["']([^"']+)["']/m)||[])[1]||"ASSETS";
- const d1Blocks=[...t.matchAll(/^\[\[d1_databases\]\]([\s\S]*?)(?=^\[|\s*$)/gm)];
+ const lines=t.split(/\r?\n/);
+ const section=header=>{
+  const start=lines.findIndex(line=>line.trim()===header);
+  if(start<0)return "";
+  let end=start+1;
+  while(end<lines.length&&!/^\s*\[/.test(lines[end]))end++;
+  return lines.slice(start+1,end).join("\n");
+ };
+ const get=(text,key)=>{
+  const line=text.split(/\r?\n/).find(row=>row.trim().startsWith(key+"=")||row.trim().startsWith(key+" ="));
+  if(!line)return "";
+  return line.slice(line.indexOf("=")+1).trim().replace(/^["']|["']$/g,"");
+ };
+ const main=get(t,"main");
+ const date=get(t,"compatibility_date")||"2025-11-01";
+ const assetBlock=section("[assets]");
+ const assetsDir=get(assetBlock,"directory");
+ const assetsBinding=get(assetBlock,"binding")||"ASSETS";
+ const d1Blocks=[];
+ for(let i=0;i<lines.length;i++){
+  if(lines[i].trim()==="[[d1_databases]]"){
+   let end=i+1;
+   while(end<lines.length&&!/^\s*\[/.test(lines[end]))end++;
+   d1Blocks.push(lines.slice(i+1,end).join("\n"));
+  }
+ }
  if(d1Blocks.length!==1)throw new Error("Exactly one D1 database binding is required in wrangler.toml.");
- const d1Binding=(d1Blocks[0][1].match(/^\s*binding\s*=\s*["']([^"']+)["']/m)||[])[1];
+ const d1Binding=get(d1Blocks[0],"binding");
  if(!main||!d1Binding)throw new Error("wrangler.toml must define main and a D1 binding.");
  return {main,date,assetsDir,assetsBinding,d1Binding};
 }
