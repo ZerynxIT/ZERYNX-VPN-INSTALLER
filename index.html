@@ -221,21 +221,17 @@ function assetMime(path){
  const e=path.split(".").pop().toLowerCase();
  return ({html:"text/html; charset=utf-8",css:"text/css; charset=utf-8",js:"application/javascript",mjs:"application/javascript",json:"application/json",svg:"image/svg+xml",png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",webp:"image/webp",gif:"image/gif",ico:"image/x-icon",txt:"text/plain; charset=utf-8",woff:"font/woff",woff2:"font/woff2"})[e]||"application/octet-stream";
 }
-function buildAssetMultipart(bucket,assetMap){
- const boundary="----ZERYNXAssets"+crypto.randomUUID().replace(/-/g,"");
- const encoder=new TextEncoder(),chunks=[];
+function buildAssetFormData(bucket,assetMap){
+ const form=new FormData();
  for(const hash of bucket){
   const asset=assetMap[hash];
   if(!asset)throw new Error("Unknown asset hash: "+hash);
-  chunks.push(encoder.encode("--"+boundary+"\r\nContent-Disposition: form-data; name=\""+hash+"\"\r\nContent-Type: "+assetMime(asset.path)+"\r\n\r\n"));
-  chunks.push(encoder.encode(asset.encoded));
-  chunks.push(encoder.encode("\r\n"));
+  // Send each hash as a multipart FILE part with an explicit filename.
+  // This matches Cloudflare's multipart file upload parser and avoids
+  // hand-built multipart framing/boundary errors.
+  form.append(hash,new Blob([asset.encoded],{type:assetMime(asset.path)}),hash);
  }
- chunks.push(encoder.encode("--"+boundary+"--\r\n"));
- const size=chunks.reduce((n,part)=>n+part.byteLength,0),body=new Uint8Array(size);
- let offset=0;
- for(const part of chunks){body.set(part,offset);offset+=part.byteLength}
- return {body,contentType:"multipart/form-data; boundary="+boundary};
+ return form;
 }
 async function applyD1Migrations(accountId,dbId,migrations){
  const endpoint="/accounts/"+accountId+"/d1/database/"+dbId+"/query";
@@ -330,18 +326,17 @@ async function deploy(token,updating){
   const session=await cf("/accounts/"+account.id+"/workers/scripts/"+name+"/assets-upload-session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({manifest})},{timeout:90000});
   const buckets=session.buckets||[];
   completion=buckets.length?null:session.jwt;
-  // Upload one asset per HTTP request. This avoids oversized multipart batches
-  // and reduces memory pressure in the browser and the Cloudflare relay.
+  // Cloudflare returns upload buckets specifically to define request batches.
+  // Use native FormData so the browser creates a valid multipart boundary and
+  // each asset is encoded as a file part (filename = content hash).
   for(const bucket of buckets){
-   for(const hash of bucket){
-    const multipart=buildAssetMultipart([hash],assetMap);
-    const asset=assetMap[hash];
-    log("Uploading asset: "+asset.path+" ("+asset.bytes?.byteLength+" bytes)...");
-    const upload=await request(apiUrl("/accounts/"+account.id+"/workers/assets/upload?base64=true"),{method:"POST",headers:{Authorization:"Bearer "+session.jwt,"Content-Type":multipart.contentType},body:multipart.body},180000,0);
-    let uploadJson;try{uploadJson=await upload.json()}catch(e){throw new Error("Assets upload returned a non-JSON response (HTTP "+upload.status+") for "+asset.path+".")}
-    if(!upload.ok||!uploadJson.success)throw new Error("Assets upload failed (HTTP "+upload.status+") for "+asset.path+": "+JSON.stringify(uploadJson.errors||uploadJson));
-    if(uploadJson.result&&uploadJson.result.jwt)completion=uploadJson.result.jwt;
-   }
+   const form=buildAssetFormData(bucket,assetMap);
+   const totalBytes=bucket.reduce((sum,hash)=>sum+(assetMap[hash]?.bytes?.byteLength||0),0);
+   log("Uploading asset batch: "+bucket.length+" file(s), "+totalBytes+" source bytes...");
+   const upload=await request(apiUrl("/accounts/"+account.id+"/workers/assets/upload?base64=true"),{method:"POST",headers:{Authorization:"Bearer "+session.jwt},body:form},180000,0);
+   let uploadJson;try{uploadJson=await upload.json()}catch(e){throw new Error("Assets upload returned a non-JSON response (HTTP "+upload.status+").")}
+   if(!upload.ok||!uploadJson.success)throw new Error("Assets upload failed (HTTP "+upload.status+"): "+JSON.stringify(uploadJson.errors||uploadJson));
+   if(uploadJson.result&&uploadJson.result.jwt)completion=uploadJson.result.jwt;
   }
   if(!completion)throw new Error("Cloudflare did not return the static-assets completion token.");
   log(tr("assetsReady"),"ok");
