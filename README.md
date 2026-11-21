@@ -23,8 +23,9 @@
 | Account | Account Settings — Read | شناسایی حساب مقصد |
 | Account | D1 — Edit | ساخت دیتابیس و اجرای SQL Migrationها |
 | Account | Workers Scripts — Edit | آپلود و انتشار Worker و Assets |
+| Account | Workers Builds Configuration — Edit | خواندن و به‌روزرسانی تنظیمات Build متصل به GitHub |
 
-Cloudflare پس از ورود، فرم را به کاربر نشان می‌دهد. کاربر باید خودش دسترسی‌ها را بررسی و تأیید کند و توکن را بسازد. لینک به‌تنهایی توکن ایجاد نمی‌کند و هیچ دسترسی‌ای بدون تأیید کاربر اعطا نمی‌شود.
+Cloudflare پس از ورود، فرم را به کاربر نشان می‌دهد. کاربر باید خودش دسترسی‌ها را بررسی و تأیید کند و توکن را بسازد. لینک به‌تنهایی توکن ایجاد نمی‌کند و هیچ دسترسی‌ای بدون تأیید کاربر اعطا نمی‌شود. برای API مربوط به Workers Builds، توکن باید از بخش **My Profile → API Tokens** ساخته شود (User-scoped؛ نه Account-owned API Token) و مجوز **Workers Builds Configuration — Edit** نیز در آن باشد. مجوز **Workers Scripts — Edit** نصاب برای انتشار مستقیم Worker استفاده می‌شود.
 
 ## راهنمای به‌روزرسانی
 
@@ -38,6 +39,21 @@ Cloudflare پس از ورود، فرم را به کاربر نشان می‌ده
 6. Migrationهای جدید SQL روی همان D1 اجرا می‌شوند.
 7. Worker با ماژول‌ها، Bindingهای D1/Assets و Assets جدید منتشر می‌شود.
 8. Health Check اتصال واقعی Worker به D1 را بررسی می‌کند.
+
+### همگام‌سازی Cloudflare Workers Builds
+
+در هر نصب و Update، نصاب محل فایل `wrangler.toml` را در ریپوی اصلی پیدا می‌کند و از مسیر آن، مقدار **Root directory** را محاسبه می‌کند؛ اگر فایل در ریشه باشد مقدار Cloudflare برابر `/` است، و اگر در پوشه‌ای مانند `worker/` باشد همان مسیر پوشه استفاده می‌شود.
+
+دستور Deploy نیز از `package.json` تشخیص داده می‌شود: اگر اسکریپت `deploy` وجود داشته باشد، نصاب Package Manager پروژه را از `packageManager` یا lockfile تشخیص می‌دهد و دستور اجرای آن اسکریپت را تنظیم می‌کند. اگر اسکریپت Deploy وجود نداشته باشد، مقدار پیش‌فرض `npx wrangler deploy` است. برای مخزن فعلی ZERYNX-VPN، چون `wrangler.toml` در ریشه است و `package.json` با اسکریپت Deploy وجود ندارد، مقادیر مورد انتظار این‌ها هستند:
+
+- **Root directory:** `/`
+- **Deploy command:** `npx wrangler deploy`
+
+اگر Worker در Cloudflare از قبل به همین ریپوی GitHub و Workers Builds متصل شده باشد، نصاب با Builds API تنظیمات Production را به‌روزرسانی می‌کند و در صورت وجود Preview، Root directory آن را هم هماهنگ می‌کند. سایر تنظیمات موجود مثل Git branch و Build token حفظ می‌شوند.
+
+**محدودیت اتصال اولیه:** اگر Worker هنوز به GitHub Builds وصل نشده باشد، نصاب به‌تنهایی نمی‌تواند GitHub App را به‌جای کاربر نصب/مجاز کند یا Build token بسازد. اتصال اولیه باید یک‌بار از Cloudflare Dashboard انجام شود: Worker → Settings → Builds → Connect؛ پس از آن نصاب می‌تواند تنظیمات موجود را خودکار اصلاح کند. اگر مجوز Builds در API Token وجود نداشته باشد، Deploy مستقیم همچنان انجام می‌شود، اما همگام‌سازی Build settings گزارش خطا می‌دهد و تنظیمات را تغییر نمی‌دهد.
+
+Cloudflare Builds API به توکن User-scoped نیاز دارد و Account-owned API Token را نمی‌پذیرد. مجوز اضافه‌شده برای این بخش **Workers Builds Configuration — Edit** است; نصاب برای پیدا کردن Worker tag از مجوز موجود **Workers Scripts — Edit** استفاده می‌کند.
 
 **Update دیتابیس قبلی را حذف یا دوباره ایجاد نمی‌کند.** همان D1 ID ذخیره‌شده در مرورگر استفاده می‌شود؛ داده‌های کاربران و تنظیمات باقی می‌مانند، مگر اینکه یک Migration عمداً آن‌ها را تغییر یا حذف کند.
 
